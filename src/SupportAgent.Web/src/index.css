@@ -1,0 +1,338 @@
+:root {
+  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+  color: #213547;
+  background-color: #f5f7fb;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+}
+
+.home {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 4rem 1.5rem;
+  text-align: center;
+}
+
+h1 {
+  margin: 0 0 0.75rem;
+  font-size: 2.75rem;
+  line-height: 1.1;
+}
+
+.tagline {
+  margin: 0 0 2rem;
+  font-size: 1.125rem;
+  color: #52606d;
+}
+
+.status {
+  display: inline-block;
+  margin: 0;
+  padding: 0.75rem 1rem;
+  border-radius: 999px;
+  font-weight: 600;
+}
+
+.status-checking {
+  background: #e4e7eb;
+  color: #52606d;
+}
+
+.status-connected {
+  background: #d3f9d8;
+  color: #2b8a3e;
+}
+
+.status-disconnected {
+  background: #ffe3e3;
+  color: #c92a2a;
+}
+
+.chat-panel {
+  margin-top: 2.5rem;
+  padding: 1.5rem;
+  border: 1px solid #d9e2ec;
+  border-radius: 12px;
+  background: #ffffff;
+  text-align: left;
+}
+
+.chat-panel h2 {
+  margin: 0 0 0.5rem;
+  font-size: 1.25rem;
+}
+
+.chat-help {
+  margin: 0 0 1rem;
+  color: #52606d;
+  font-size: 0.95rem;
+}
+
+.chat-form {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.chat-form textarea {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid #cbd5e0;
+  border-radius: 8px;
+  font: inherit;
+  resize: vertical;
+}
+
+.chat-form button {
+  justify-self: start;
+  padding: 0.65rem 1rem;
+  border: none;
+  border-radius: 8px;
+  background: #364fc7;
+  color: #ffffff;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.chat-form button:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.chat-error {
+  margin: 1rem 0 0;
+  color: #c92a2a;
+}
+
+.chat-response {
+  margin-top: 1rem;
+  padding: 1rem;
+  border-radius: 8px;
+  background: #f8fafc;
+}
+
+.chat-response p {
+  margin: 0;
+}
+
+.chat-meta {
+  margin-top: 0.75rem !important;
+  color: #52606d;
+  font-size: 0.875rem;
+}
+
+.chat-tools {
+  margin-top: 1rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid #d9e2ec;
+  font-size: 0.875rem;
+  color: #364fc7;
+}
+
+.chat-tools ul {
+  margin: 0.5rem 0 0;
+  padding-left: 1.25rem;
+}
+
+.chat-sources ul {
+  margin: 0.5rem 0 0;
+  padding-left: 1.25rem;
+}
+
+.home-links {
+  margin: 1rem 0 0;
+}
+
+.home-links a {
+  color: #364fc7;
+  font-weight: 600;
+}
+
+.workspace {
+  min-height: 100vh;
+  padding: 1.5rem;
+}
+
+.workspace-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.workspace-header h1 {
+  margin: 0 0 0.25rem;
+  font-size: 2rem;
+}
+
+.workspace-link {
+  color: #364fc7;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.workspace-grid {
+  display: grid;
+  grid-template-columns: 280px minmax(0, 1fr) 360px;
+  gap: 1rem;
+  align-items: start;
+}
+
+.workspace-grid.single-column {
+  grid-template-columns: 280px minmax(0, 1fr);
+}
+
+.ticket-list,
+.ticket-conversation,
+.copilot-panel,
+.empty-state {
+  background: #ffffff;
+  border: 1px solid #d9e2ec;
+  border-radius: 12px;
+  padding: 1rem;
+  min-height: 70vh;
+}
+
+.panel-header h2 {
+  margin: 0 0 0.5rem;
+  font-size: 1.1rem;
+}
+
+.panel-help,
+.ticket-summary,
+.ticket-meta,
+.draft-meta,
+.conversation-id {
+  color: #52606d;
+  font-size: 0.875rem;
+}
+
+.panel-error {
+  color: #c92a2a;
+}
+
+.ticket-list ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.ticket-link {
+  display: block;
+  padding: 0.75rem;
+  border-radius: 8px;
+  text-decoration: none;
+  color: inherit;
+  border: 1px solid transparent;
+}
+
+.ticket-link.active,
+.ticket-link:hover {
+  background: #edf2ff;
+  border-color: #bac8ff;
+}
+
+.ticket-link strong {
+  display: block;
+}
+
+.ticket-messages {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.ticket-message {
+  padding: 0.875rem;
+  border-radius: 10px;
+}
+
+.ticket-message header {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.5rem;
+  font-size: 0.875rem;
+}
+
+.ticket-message.customer {
+  background: #fff4e6;
+  border: 1px solid #ffd8a8;
+}
+
+.ticket-message.agent {
+  background: #edf2ff;
+  border: 1px solid #bac8ff;
+}
+
+.copilot-form {
+  display: grid;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.copilot-form textarea {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid #cbd5e0;
+  border-radius: 8px;
+  font: inherit;
+  resize: vertical;
+}
+
+.copilot-form button,
+.secondary-button {
+  justify-self: start;
+  padding: 0.65rem 1rem;
+  border: none;
+  border-radius: 8px;
+  background: #364fc7;
+  color: #ffffff;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.secondary-button {
+  background: #495057;
+}
+
+.copilot-form button:disabled,
+.secondary-button:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.copilot-answer,
+.copilot-draft {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid #d9e2ec;
+}
+
+.empty-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #52606d;
+}
+
+@media (max-width: 1100px) {
+  .workspace-grid {
+    grid-template-columns: 1fr;
+  }
+}

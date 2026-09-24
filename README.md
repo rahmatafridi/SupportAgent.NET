@@ -754,3 +754,50 @@ AI-heavy endpoints use ASP.NET Core partitioned rate limiting, keyed by authenti
 AI provider keys remain backend-only. AI tools keep their original schemas and cannot choose an organization. Suggested replies remain drafts for human review and are never sent automatically.
 
 > SupportAgent.NET is a starter/reference project. Perform a full security review, configure production HTTPS/cookie policy, secrets, monitoring, and operational controls before deploying it to production.
+
+## Ticket Management
+
+Admin and SupportAgent users can create tenant-scoped tickets for existing customers, update status and priority, and add human agent replies. A new ticket creates its initial message as a customer message.
+
+```text
+Create Ticket → Customer → Initial Message → Support Agent
+              → AI Assistance → Human-approved Reply → Close Ticket
+```
+
+AI-generated suggested replies remain drafts. They are never stored or sent automatically: an agent must choose **Use Draft** and then explicitly click **Send Reply**.
+
+## Document Knowledge Ingestion
+
+Admins can upload PDF, DOCX, and UTF-8 TXT documents from `/knowledge` or `POST /api/knowledge/upload`:
+
+```text
+Admin upload
+  -> format and size validation
+  -> in-memory text extraction
+  -> existing text chunker
+  -> configured embedding provider
+  -> tenant-scoped SQL knowledge store
+  -> SearchKnowledgeBase
+  -> grounded AI response
+```
+
+The default maximum upload size is 10 MB and can be changed with `KnowledgeUpload:MaxFileSizeMb`. PDF extraction reads embedded text only; scanned/image-only PDFs are rejected because OCR is not included. Raw files are processed in memory and are not retained on disk or written to `wwwroot`. Only extracted chunks and safe document metadata are persisted.
+
+Knowledge remains tenant scoped. Admins can upload and delete; Admin and SupportAgent users can list document metadata; Viewer users cannot access knowledge APIs or the `/knowledge` page.
+
+Example request (obtain an antiforgery token and authenticated cookie first):
+
+```bash
+curl -b cookies.txt -H "X-CSRF-TOKEN: $CSRF_TOKEN" \
+  -F "file=@returns-and-refunds.pdf;type=application/pdf" \
+  -F "title=Returns and Refunds" \
+  http://localhost:5191/api/knowledge/upload
+```
+
+List and delete documents:
+
+```text
+GET    /api/knowledge/documents
+GET    /api/knowledge/documents/{id}
+DELETE /api/knowledge/documents/{id}
+```

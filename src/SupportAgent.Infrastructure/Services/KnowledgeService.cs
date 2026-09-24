@@ -70,6 +70,18 @@ public class KnowledgeService : IKnowledgeService
         _dbContext.KnowledgeDocuments.Add(document);
         await _dbContext.SaveChangesAsync(cancellationToken);
 
+        await ProcessDocumentAsync(document.Id, content, cancellationToken);
+        return document;
+    }
+
+    /// <inheritdoc />
+    public async Task<int> ProcessDocumentAsync(int documentId, string content, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(content)) throw new ArgumentException("Content is required.", nameof(content));
+        var document = await _dbContext.KnowledgeDocuments.FirstOrDefaultAsync(x => x.Id == documentId, cancellationToken)
+            ?? throw new InvalidOperationException($"Knowledge document '{documentId}' was not found.");
+        var createdAt = DateTime.UtcNow;
+
         var chunkTexts = _textChunker.Chunk(content);
         var chunkEntities = new List<KnowledgeChunk>();
 
@@ -101,7 +113,7 @@ public class KnowledgeService : IKnowledgeService
             }
             catch (Exception exception) when (exception is not OperationCanceledException)
             {
-                _logger.LogError(exception, "Failed to generate embeddings while ingesting document '{Title}'.", title);
+                _logger.LogError(exception, "Failed to generate embeddings while ingesting document {DocumentId}.", documentId);
                 throw new InvalidOperationException(
                     "Failed to generate embeddings for the knowledge document. Ensure the embedding provider is configured and running.",
                     exception);
@@ -110,7 +122,7 @@ public class KnowledgeService : IKnowledgeService
 
         _dbContext.KnowledgeChunks.AddRange(chunkEntities);
         await _dbContext.SaveChangesAsync(cancellationToken);
-        return document;
+        return chunkEntities.Count;
     }
 
     /// <inheritdoc />

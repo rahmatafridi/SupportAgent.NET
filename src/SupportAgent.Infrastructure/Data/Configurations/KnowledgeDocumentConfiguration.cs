@@ -32,6 +32,13 @@ public class KnowledgeDocumentConfiguration : IEntityTypeConfiguration<Knowledge
         builder.Property(document => document.CreatedAt)
             .IsRequired();
 
+        builder.Property(document => document.OriginalFileName).HasMaxLength(255);
+        builder.Property(document => document.ProcessingStatus)
+            .HasMaxLength(30)
+            .IsRequired()
+            .HasDefaultValue("Completed");
+        builder.Property(document => document.ProcessingError).HasMaxLength(500);
+
         builder.HasMany(document => document.Chunks)
             .WithOne(chunk => chunk.KnowledgeDocument)
             .HasForeignKey(chunk => chunk.KnowledgeDocumentId)

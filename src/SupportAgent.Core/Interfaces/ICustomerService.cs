@@ -7,6 +7,8 @@ namespace SupportAgent.Core.Interfaces;
 /// </summary>
 public interface ICustomerService
 {
+    Task<IReadOnlyList<Customer>> GetCustomersAsync(CancellationToken cancellationToken = default);
+
     /// <summary>
     /// Gets one customer by ID from the database.
     /// </summary>

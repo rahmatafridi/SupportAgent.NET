@@ -55,7 +55,10 @@ public static class AIServiceCollectionExtensions
             client.BaseAddress = new Uri(options.Ollama.BaseUrl.TrimEnd('/') + "/");
         });
 
-        services.AddScoped<IEmbeddingService, OllamaEmbeddingService>();
+        // Resolve the interface through the typed-client registration above so its
+        // configured Ollama BaseAddress is preserved.
+        services.AddScoped<IEmbeddingService>(serviceProvider =>
+            serviceProvider.GetRequiredService<OllamaEmbeddingService>());
 
         services.AddSingleton<IAIProvider>(serviceProvider =>
             serviceProvider.GetRequiredService<OllamaProvider>());

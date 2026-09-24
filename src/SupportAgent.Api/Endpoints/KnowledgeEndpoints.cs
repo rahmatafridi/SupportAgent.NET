@@ -27,6 +27,45 @@ public static class KnowledgeEndpoints
     /// <returns>The same route builder so calls can be chained.</returns>
     public static IEndpointRouteBuilder MapKnowledgeEndpoints(this IEndpointRouteBuilder app)
     {
+        app.MapPost("/api/knowledge/upload", async (
+            IFormFile file,
+            string? title,
+            IKnowledgeIngestionService ingestionService,
+            CancellationToken cancellationToken) =>
+        {
+            try
+            {
+                await using var stream = file.OpenReadStream();
+                var result = await ingestionService.UploadDocumentAsync(stream, file.FileName, file.ContentType, file.Length, title, cancellationToken);
+                return Results.Ok(result);
+            }
+            catch (DocumentIngestionException exception)
+            {
+                return Results.BadRequest(new { error = exception.Message });
+            }
+        })
+        .RequireAuthorization(AuthorizationPolicies.AdminOnly)
+        .AddEndpointFilter<AntiforgeryEndpointFilter>()
+        .WithName("UploadKnowledgeDocument")
+        .WithSummary("Uploads and ingests a PDF, DOCX, or TXT knowledge document.");
+
+        app.MapGet("/api/knowledge/documents", async (IKnowledgeIngestionService service, CancellationToken cancellationToken) =>
+            Results.Ok(await service.GetDocumentsAsync(cancellationToken)))
+            .RequireAuthorization(AuthorizationPolicies.KnowledgeSearch)
+            .WithName("GetKnowledgeDocuments");
+
+        app.MapGet("/api/knowledge/documents/{id:int}", async (int id, IKnowledgeIngestionService service, CancellationToken cancellationToken) =>
+        {
+            var document = await service.GetDocumentAsync(id, cancellationToken);
+            return document is null ? Results.NotFound() : Results.Ok(document);
+        }).RequireAuthorization(AuthorizationPolicies.KnowledgeSearch).WithName("GetKnowledgeDocument");
+
+        app.MapDelete("/api/knowledge/documents/{id:int}", async (int id, IKnowledgeIngestionService service, CancellationToken cancellationToken) =>
+            await service.DeleteDocumentAsync(id, cancellationToken) ? Results.NoContent() : Results.NotFound())
+            .RequireAuthorization(AuthorizationPolicies.AdminOnly)
+            .AddEndpointFilter<AntiforgeryEndpointFilter>()
+            .WithName("DeleteKnowledgeDocument");
+
         // POST /api/knowledge/documents
         // Adds a company knowledge document and stores searchable chunks through IKnowledgeService.
         app.MapPost("/api/knowledge/documents", async (

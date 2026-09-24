@@ -6,6 +6,7 @@ import { LoginPage } from './pages/LoginPage'
 import { RegisterPage } from './pages/RegisterPage'
 import { AdminUsagePage } from './pages/AdminUsagePage'
 import { ProtectedRoute } from './auth/ProtectedRoute'
+import { KnowledgePage } from './pages/KnowledgePage'
 
 export function App() {
   return (
@@ -16,6 +17,7 @@ export function App() {
       <Route path="/tickets" element={<ProtectedRoute><TicketsPage /></ProtectedRoute>} />
       <Route path="/tickets/:id" element={<ProtectedRoute><TicketDetailPage /></ProtectedRoute>} />
       <Route path="/admin/usage" element={<ProtectedRoute role="Admin"><AdminUsagePage /></ProtectedRoute>} />
+      <Route path="/knowledge" element={<ProtectedRoute roles={['Admin', 'SupportAgent']}><KnowledgePage /></ProtectedRoute>} />
       <Route path="*" element={<Navigate to="/tickets" replace />} />
     </Routes>
   )

@@ -4,9 +4,10 @@ import type { CopilotAskResponse, CopilotDraftResponse } from '../types/copilot'
 
 interface CopilotPanelProps {
   ticketId: number
+  onUseDraft?(text: string): void
 }
 
-export function CopilotPanel({ ticketId }: CopilotPanelProps) {
+export function CopilotPanel({ ticketId, onUseDraft }: CopilotPanelProps) {
   const [conversationId, setConversationId] = useState<string | null>(null)
   const [question, setQuestion] = useState('What is happening with this customer?')
   const [answer, setAnswer] = useState<CopilotAskResponse | null>(null)
@@ -151,6 +152,7 @@ export function CopilotPanel({ ticketId }: CopilotPanelProps) {
           <button type="button" className="secondary-button" onClick={handleCopyDraft}>
             Copy Reply
           </button>
+          {onUseDraft && <button type="button" className="secondary-button" onClick={() => onUseDraft(draft.draft.body)}>Use Draft</button>}
         </div>
       )}
     </aside>

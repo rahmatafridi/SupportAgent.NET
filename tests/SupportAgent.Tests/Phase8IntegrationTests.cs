@@ -11,6 +11,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 using Microsoft.AspNetCore.DataProtection;
 using SupportAgent.Core.Models;
+using SupportAgent.Core.Interfaces;
 using SupportAgent.Infrastructure.Data;
 using SupportAgent.Infrastructure.Identity;
 
@@ -39,6 +40,8 @@ public sealed class Phase8ApplicationFactory : WebApplicationFactory<Program>
             services.AddDbContext<SupportAgentDbContext>(options =>
                 options.UseInMemoryDatabase(_databaseName));
             services.AddDataProtection().UseEphemeralDataProtectionProvider();
+            services.RemoveAll<IEmbeddingService>();
+            services.AddScoped<IEmbeddingService, FakeEmbeddingService>();
         });
     }
 }

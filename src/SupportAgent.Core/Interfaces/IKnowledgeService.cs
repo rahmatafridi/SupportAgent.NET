@@ -5,8 +5,9 @@ namespace SupportAgent.Core.Interfaces;
 /// <summary>
 /// Company knowledge base operations used by API endpoints and AI tools.
 /// </summary>
-public interface IKnowledgeService
-{
+public interface IKnowledgeService
+{
+    Task<int> ProcessDocumentAsync(int documentId, string content, CancellationToken cancellationToken = default);
     /// <summary>
     /// Adds a knowledge document and stores it as searchable chunks with embeddings.
     /// </summary>

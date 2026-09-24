@@ -12,11 +12,13 @@ internal static class KnowledgeServiceTestFactory
     public static KnowledgeService Create(
         SupportAgentDbContext context,
         IEmbeddingService? embeddingService = null,
-        KnowledgeSearchOptions? searchOptions = null) =>
+        KnowledgeSearchOptions? searchOptions = null,
+        ICurrentUserContext? currentUser = null) =>
         new(
             context,
             new TextChunker(),
             embeddingService ?? new FakeEmbeddingService(),
             Options.Create(searchOptions ?? new KnowledgeSearchOptions()),
-            NullLogger<KnowledgeService>.Instance);
+            NullLogger<KnowledgeService>.Instance,
+            currentUser);
 }

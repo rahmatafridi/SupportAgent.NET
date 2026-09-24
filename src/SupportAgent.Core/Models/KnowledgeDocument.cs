@@ -22,6 +22,13 @@ public class KnowledgeDocument
     /// <summary>Date and time when the document was added.</summary>
     public DateTime CreatedAt { get; set; }
 
+    public string? OriginalFileName { get; set; }
+    public long? FileSizeBytes { get; set; }
+    public Guid? UploadedByUserId { get; set; }
+    public DateTime? UploadedAt { get; set; }
+    public string ProcessingStatus { get; set; } = "Completed";
+    public string? ProcessingError { get; set; }
+
     /// <summary>Searchable chunks derived from the original document content.</summary>
     public ICollection<KnowledgeChunk> Chunks { get; set; } = new List<KnowledgeChunk>();
 }

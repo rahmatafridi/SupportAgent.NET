@@ -41,3 +41,19 @@ export async function fetchTicketMessages(ticketId: number): Promise<TicketMessa
   const response = await apiFetch(`/api/tickets/${ticketId}/messages`)
   return readJson<TicketMessage[]>(response)
 }
+
+export async function createTicket(request: { customerId: number; subject: string; priority: string; message: string }): Promise<Ticket> {
+  return readJson<Ticket>(await apiFetch('/api/tickets', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(request) }))
+}
+
+export async function updateTicketStatus(ticketId: number, status: string): Promise<Ticket> {
+  return readJson<Ticket>(await apiFetch(`/api/tickets/${ticketId}/status`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status }) }))
+}
+
+export async function updateTicketPriority(ticketId: number, priority: string): Promise<Ticket> {
+  return readJson<Ticket>(await apiFetch(`/api/tickets/${ticketId}/priority`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ priority }) }))
+}
+
+export async function addAgentMessage(ticketId: number, message: string): Promise<TicketMessage> {
+  return readJson<TicketMessage>(await apiFetch(`/api/tickets/${ticketId}/messages`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message }) }))
+}

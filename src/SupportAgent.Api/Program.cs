@@ -11,6 +11,7 @@ using SupportAgent.Api.Authorization;
 using SupportAgent.Core.Interfaces;
 using SupportAgent.Infrastructure.Data;
 using SupportAgent.Infrastructure.Identity;
+using Microsoft.AspNetCore.Http.Features;
 
 // Application entry point.
 // Registers services, maps API endpoints, and starts the web server.
@@ -70,8 +71,11 @@ builder.Services.ConfigureApplicationCookie(options =>
 builder.Services.AddAuthorizationBuilder()
     .AddPolicy(AuthorizationPolicies.AiAccess, policy => policy.RequireRole(ApplicationRoles.Admin, ApplicationRoles.SupportAgent))
     .AddPolicy(AuthorizationPolicies.KnowledgeSearch, policy => policy.RequireRole(ApplicationRoles.Admin, ApplicationRoles.SupportAgent))
+    .AddPolicy(AuthorizationPolicies.TicketManagement, policy => policy.RequireRole(ApplicationRoles.Admin, ApplicationRoles.SupportAgent))
     .AddPolicy(AuthorizationPolicies.AdminOnly, policy => policy.RequireRole(ApplicationRoles.Admin));
 builder.Services.AddAntiforgery(options => options.HeaderName = "X-CSRF-TOKEN");
+var maxUploadBytes = builder.Configuration.GetValue("KnowledgeUpload:MaxFileSizeMb", 10) * 1024L * 1024L;
+builder.Services.Configure<FormOptions>(options => options.MultipartBodyLengthLimit = maxUploadBytes + 1024L * 1024L);
 var aiRequestsPerMinute = builder.Configuration.GetValue("RateLimiting:AIRequestsPerMinute", 20);
 builder.Services.AddRateLimiter(options =>
 {

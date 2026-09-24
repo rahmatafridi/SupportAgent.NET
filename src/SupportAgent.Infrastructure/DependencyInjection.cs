@@ -7,6 +7,7 @@ using SupportAgent.Infrastructure.Knowledge;
 using SupportAgent.Infrastructure.Services;
 using Microsoft.AspNetCore.Identity;
 using SupportAgent.Infrastructure.Identity;
+using SupportAgent.Infrastructure.Documents;
 
 namespace SupportAgent.Infrastructure;
 
@@ -53,6 +54,7 @@ public static class DependencyInjection
 
         services.Configure<Copilot.CopilotOptions>(
             configuration.GetSection(Copilot.CopilotOptions.SectionName));
+        services.Configure<KnowledgeUploadOptions>(configuration.GetSection(KnowledgeUploadOptions.SectionName));
 
         services.AddScoped<ICustomerService, CustomerService>();
         services.AddScoped<IOrderService, OrderService>();
@@ -62,6 +64,8 @@ public static class DependencyInjection
         services.AddScoped<ICopilotService, CopilotService>();
         services.AddSingleton<ITextChunker, TextChunker>();
         services.AddScoped<IKnowledgeService, KnowledgeService>();
+        services.AddScoped<IDocumentTextExtractor, DocumentTextExtractor>();
+        services.AddScoped<IKnowledgeIngestionService, KnowledgeIngestionService>();
 
         return services;
     }

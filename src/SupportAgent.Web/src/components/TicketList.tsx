@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react'
 import { fetchTickets } from '../services/ticketService'
 import type { TicketListItem } from '../types/ticket'
 
-export function TicketList() {
+export function TicketList({ refreshKey = 0 }: { refreshKey?: number }) {
   const { id } = useParams()
   const selectedId = id ? Number(id) : null
   const [tickets, setTickets] = useState<TicketListItem[]>([])
@@ -13,7 +13,7 @@ export function TicketList() {
     fetchTickets()
       .then(setTickets)
       .catch((err: Error) => setError(err.message))
-  }, [])
+  }, [refreshKey])
 
   return (
     <aside className="ticket-list">

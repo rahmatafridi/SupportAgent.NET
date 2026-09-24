@@ -36,6 +36,15 @@ body {
 .usage-page table { width: 100%; margin-top: 1.5rem; border-collapse: collapse; background: #fff; }
 .usage-page th, .usage-page td { padding: .75rem; text-align: left; border-bottom: 1px solid #d9e2ec; }
 .loading { padding: 2rem; text-align: center; }
+.knowledge-page { max-width: 1050px; margin: 0 auto; padding: 2rem 1.5rem; }
+.knowledge-upload, .knowledge-documents { margin-top: 1.5rem; padding: 1.25rem; background: #fff; border: 1px solid #d9e2ec; border-radius: 12px; }
+.knowledge-upload { display: grid; gap: .9rem; }.knowledge-upload h2, .knowledge-documents h2 { margin: 0; }
+.knowledge-upload label { display: grid; gap: .35rem; font-weight: 600; }.knowledge-upload input { padding: .65rem; border: 1px solid #cbd5e0; border-radius: 7px; }
+.knowledge-upload button { justify-self: start; padding: .65rem 1rem; border: 0; border-radius: 7px; color: #fff; background: #364fc7; font-weight: 600; }
+.knowledge-upload button:disabled { opacity: .65; }.success-message { color: #2b8a3e; }
+.knowledge-list { display: grid; gap: .75rem; }.knowledge-list article { display: flex; justify-content: space-between; gap: 1rem; padding: 1rem; border: 1px solid #d9e2ec; border-radius: 9px; }
+.knowledge-list h3, .knowledge-list p { margin: 0 0 .3rem; }.knowledge-list small { color: #52606d; }
+.danger-button { align-self: center; padding: .55rem .8rem; border: 0; border-radius: 7px; background: #c92a2a; color: #fff; cursor: pointer; }
 
 .home {
   max-width: 720px;
@@ -203,6 +212,34 @@ h1 {
   text-decoration: none;
 }
 
+.header-actions, .form-actions, .ticket-controls { display: flex; gap: 0.75rem; align-items: center; }
+.button-primary, .button-secondary, .icon-button { border: 0; font: inherit; font-weight: 700; cursor: pointer; transition: transform .15s ease, box-shadow .15s ease, background .15s ease; }
+.button-primary { display: inline-flex; align-items: center; justify-content: center; gap: .35rem; padding: .7rem 1rem; border-radius: 9px; color: #fff; background: #364fc7; box-shadow: 0 4px 12px rgba(54,79,199,.22); }
+.button-primary:hover { background: #2f43b3; transform: translateY(-1px); }
+.button-secondary { padding: .7rem 1rem; border: 1px solid #cbd5e0; border-radius: 9px; color: #334e68; background: #fff; }
+.button-secondary:hover { background: #f5f7fb; }
+.button-primary:disabled, .button-secondary:disabled { opacity: .6; cursor: not-allowed; transform: none; }
+.modal-backdrop { position: fixed; inset: 0; z-index: 1000; display: grid; place-items: center; padding: 1.25rem; background: rgba(15,23,42,.58); backdrop-filter: blur(3px); }
+.new-ticket-modal { width: min(680px, 100%); max-height: calc(100vh - 2.5rem); overflow: auto; background: #fff; border: 1px solid rgba(255,255,255,.5); border-radius: 16px; box-shadow: 0 24px 70px rgba(15,23,42,.28); }
+.modal-header { display: flex; justify-content: space-between; gap: 1rem; padding: 1.5rem 1.5rem 1.1rem; border-bottom: 1px solid #e8edf3; }
+.modal-header h2 { margin: .15rem 0 .3rem; color: #102a43; font-size: 1.45rem; }
+.modal-header p { margin: 0; color: #627d98; }
+.eyebrow { color: #364fc7; font-size: .75rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+.icon-button { align-self: flex-start; width: 2.25rem; height: 2.25rem; border-radius: 999px; color: #52606d; background: #f1f5f9; font-size: 1.45rem; line-height: 1; }
+.icon-button:hover { color: #102a43; background: #e2e8f0; }
+.ticket-form { display: grid; grid-template-columns: minmax(0, 1fr) 150px; gap: 1rem; padding: 1.4rem 1.5rem 1.5rem; }
+.form-field, .agent-reply label, .ticket-controls label { display: grid; gap: .4rem; color: #243b53; font-weight: 700; }
+.form-field-wide { grid-column: 1 / -1; }
+.form-field input, .form-field select, .form-field textarea, .agent-reply textarea, .ticket-controls select { width: 100%; padding: .75rem .85rem; border: 1px solid #cbd5e0; border-radius: 9px; color: #102a43; background: #fff; font: inherit; outline: none; transition: border-color .15s ease, box-shadow .15s ease; }
+.form-field input:focus, .form-field select:focus, .form-field textarea:focus, .agent-reply textarea:focus, .ticket-controls select:focus { border-color: #5c7cfa; box-shadow: 0 0 0 3px rgba(92,124,250,.15); }
+.form-field textarea { resize: vertical; min-height: 125px; }
+.form-field small { justify-self: end; color: #829ab1; font-weight: 500; }
+.modal-actions { display: flex; justify-content: flex-end; gap: .75rem; padding-top: .25rem; }
+.agent-reply { display: grid; gap: 0.75rem; }
+.ticket-controls { margin-top: 0.75rem; }
+.agent-reply { margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #d9e2ec; }
+.agent-reply button { justify-self: start; }
+
 .workspace-grid {
   display: grid;
   grid-template-columns: 280px minmax(0, 1fr) 360px;
@@ -352,4 +389,15 @@ h1 {
   .workspace-grid {
     grid-template-columns: 1fr;
   }
+}
+
+@media (max-width: 640px) {
+  .workspace { padding: 1rem; }
+  .workspace-header { align-items: stretch; flex-direction: column; }
+  .header-actions { justify-content: space-between; }
+  .ticket-form { grid-template-columns: 1fr; padding: 1.1rem; }
+  .form-field-wide { grid-column: auto; }
+  .modal-header { padding: 1.2rem 1.1rem 1rem; }
+  .modal-actions { flex-direction: column-reverse; }
+  .modal-actions button { width: 100%; }
 }

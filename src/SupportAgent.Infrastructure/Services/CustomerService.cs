@@ -21,6 +21,11 @@ public class CustomerService : ICustomerService
         _dbContext = dbContext;
     }
 
+    public async Task<IReadOnlyList<Customer>> GetCustomersAsync(CancellationToken cancellationToken = default) =>
+        await _dbContext.Customers.AsNoTracking()
+            .OrderBy(customer => customer.FirstName).ThenBy(customer => customer.LastName)
+            .ToListAsync(cancellationToken);
+
     /// <inheritdoc />
     public async Task<Customer?> GetCustomerAsync(
         int customerId,

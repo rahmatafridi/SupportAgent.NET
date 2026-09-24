@@ -14,6 +14,12 @@ public static class CustomerEndpoints
     /// <returns>The same route builder so calls can be chained.</returns>
     public static IEndpointRouteBuilder MapCustomerEndpoints(this IEndpointRouteBuilder app)
     {
+        app.MapGet("/api/customers", async (ICustomerService customerService, CancellationToken cancellationToken) =>
+            Results.Ok(await customerService.GetCustomersAsync(cancellationToken)))
+            .WithName("GetCustomers")
+            .RequireAuthorization()
+            .WithSummary("Lists customers in the current organization.");
+
         // GET /api/customers/{id}
         // Looks up one customer by numeric ID through the business service layer.
         app.MapGet("/api/customers/{id:int}", async (

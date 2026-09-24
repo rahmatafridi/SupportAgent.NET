@@ -1,9 +1,11 @@
 using System.Net;
 using System.Net.Http.Json;
+using System.Text.Json;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
+using SupportAgent.Core.Enums;
 using SupportAgent.Core.Models;
 using SupportAgent.Core.Models.AI;
 using SupportAgent.Infrastructure.AI;
@@ -118,6 +120,101 @@ public class OllamaProviderTests
 
         Assert.Equal("Customer 101 is John Smith.", response.Text);
         Assert.Empty(response.ToolCalls);
+    }
+
+    [Fact]
+    public async Task GenerateAsync_ReplaysAssistantToolArgumentsAsJsonObject()
+    {
+        string? chatRequestBody = null;
+        var handler = new StubHttpMessageHandler(request =>
+        {
+            if (request.RequestUri?.AbsolutePath == "/api/show")
+            {
+                return JsonResponse(new { capabilities = new[] { "tools" } });
+            }
+
+            chatRequestBody = request.Content!.ReadAsStringAsync().GetAwaiter().GetResult();
+            return JsonResponse(new
+            {
+                model = "llama3.1",
+                message = new { role = "assistant", content = "Customer 101 is John Smith." }
+            });
+        });
+
+        await CreateProvider(handler).GenerateAsync(new AIRequest
+        {
+            Messages =
+            [
+                new AIMessage
+                {
+                    Role = AIMessageRole.Assistant,
+                    ToolCalls =
+                    [
+                        new AIToolCall
+                        {
+                            Id = "call-1",
+                            Name = SupportToolDefinitions.GetCustomerToolName,
+                            ArgumentsJson = "{\"customerId\":101}"
+                        }
+                    ]
+                },
+                new AIMessage
+                {
+                    Role = AIMessageRole.Tool,
+                    ToolCallId = "call-1",
+                    ToolName = SupportToolDefinitions.GetCustomerToolName,
+                    Content = "{\"id\":101,\"name\":\"John Smith\"}"
+                }
+            ],
+            Tools = SupportToolDefinitions.GetAll()
+        });
+
+        using var document = JsonDocument.Parse(chatRequestBody!);
+        var arguments = document.RootElement
+            .GetProperty("messages")[0]
+            .GetProperty("tool_calls")[0]
+            .GetProperty("function")
+            .GetProperty("arguments");
+
+        Assert.Equal(JsonValueKind.Object, arguments.ValueKind);
+        Assert.Equal(101, arguments.GetProperty("customerId").GetInt32());
+    }
+
+    [Fact]
+    public async Task GenerateAsync_AcceptsModernObjectToolCapability()
+    {
+        var handler = new StubHttpMessageHandler(request => request.RequestUri?.AbsolutePath == "/api/show"
+            ? JsonResponse(new { capabilities = new { tools = true, vision = false } })
+            : JsonResponse(new { model = "llama3.1", message = new { role = "assistant", content = "No tool needed." } }));
+        var response = await CreateProvider(handler).GenerateAsync(new AIRequest { Prompt = "Hello", Tools = SupportToolDefinitions.GetAll() });
+        Assert.Equal("No tool needed.", response.Text);
+    }
+
+    [Fact]
+    public async Task GenerateAsync_AcceptsLegacyTemplateOnlyWhenNativeToolsVariableIsExplicit()
+    {
+        var handler = new StubHttpMessageHandler(request => request.RequestUri?.AbsolutePath == "/api/show"
+            ? JsonResponse(new { template = "{{ if .Tools }}{{ .Tools }}{{ end }}" })
+            : JsonResponse(new { model = "llama3.1", message = new { role = "assistant", content = "Supported." } }));
+        var response = await CreateProvider(handler).GenerateAsync(new AIRequest { Prompt = "Hello", Tools = SupportToolDefinitions.GetAll() });
+        Assert.Equal("Supported.", response.Text);
+    }
+
+    [Fact]
+    public async Task GenerateAsync_RejectsExplicitCapabilityListWithoutTools()
+    {
+        var handler = new StubHttpMessageHandler(_ => JsonResponse(new { capabilities = new[] { "completion", "vision" } }));
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => CreateProvider(handler).GenerateAsync(new AIRequest { Prompt = "Hello", Tools = SupportToolDefinitions.GetAll() }));
+        Assert.Contains("does not support native tool calling", exception.Message);
+    }
+
+    [Fact]
+    public async Task GenerateAsync_ReportsMissingModelInsteadOfCapabilityVerificationFailure()
+    {
+        var handler = new StubHttpMessageHandler(_ => new HttpResponseMessage(HttpStatusCode.NotFound) { Content = JsonContent.Create(new { error = "model 'llama3.1:latest' not found" }) });
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => CreateProvider(handler).GenerateAsync(new AIRequest { Prompt = "Hello", Tools = SupportToolDefinitions.GetAll() }));
+        Assert.Contains("is not installed", exception.Message);
+        Assert.Contains("ollama pull", exception.Message);
     }
 
     [Fact]

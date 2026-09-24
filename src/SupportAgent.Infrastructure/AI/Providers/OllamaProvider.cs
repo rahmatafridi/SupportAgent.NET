@@ -315,31 +315,77 @@ public class OllamaProvider : IAIProvider
     {
         using var response = await _httpClient.PostAsJsonAsync(
             "/api/show",
-            new { name = _options.Model },
+            new { model = _options.Model, verbose = true },
             cancellationToken);
+
+        var body = await response.Content.ReadAsStringAsync(cancellationToken);
 
         if (!response.IsSuccessStatusCode)
         {
-            throw new InvalidOperationException(
-                $"Unable to verify Ollama model '{_options.Model}' for native tool calling support.");
-        }
-
-        var body = await response.Content.ReadAsStringAsync(cancellationToken);
-        using var document = JsonDocument.Parse(body);
-
-        if (document.RootElement.TryGetProperty("capabilities", out var capabilities))
-        {
-            foreach (var capability in capabilities.EnumerateArray())
+            var serverError = TryReadError(body);
+            if ((int)response.StatusCode == 404 ||
+                serverError.Contains("not found", StringComparison.OrdinalIgnoreCase))
             {
-                if (string.Equals(capability.GetString(), "tools", StringComparison.OrdinalIgnoreCase))
-                {
-                    return;
-                }
+                throw new InvalidOperationException(
+                    $"Ollama model '{_options.Model}' is not installed. Run 'ollama pull {_options.Model}' and try again.");
             }
+
+            throw new InvalidOperationException(
+                $"Unable to verify Ollama model '{_options.Model}' for native tool calling support. " +
+                $"Ollama returned HTTP {(int)response.StatusCode}.");
         }
+
+        using var document = JsonDocument.Parse(body);
+        var root = document.RootElement;
+        var hasCapabilities = root.TryGetProperty("capabilities", out var capabilities);
+        var rawCapabilities = hasCapabilities ? capabilities.GetRawText() : "<missing>";
+        var rawDetails = root.TryGetProperty("details", out var details) ? details.GetRawText() : "<missing>";
+        var templateHasNativeTools = root.TryGetProperty("template", out var template) &&
+            template.ValueKind == JsonValueKind.String &&
+            template.GetString()!.Contains(".Tools", StringComparison.Ordinal);
+
+        if (_hostEnvironment.IsDevelopment())
+        {
+            _logger.LogInformation(
+                "Ollama /api/show capability metadata: model={Model}, capabilities={Capabilities}, details={Details}, template_has_native_tools={TemplateHasNativeTools}",
+                _options.Model, rawCapabilities, rawDetails, templateHasNativeTools);
+        }
+
+        if (hasCapabilities)
+        {
+            if (HasToolCapability(capabilities)) return;
+            throw new InvalidOperationException(
+                $"Ollama model '{_options.Model}' does not support native tool calling. Choose a tool-capable model such as llama3.1 or qwen2.5.");
+        }
+
+        // Older Ollama versions did not return capabilities. Only accept their
+        // response when the model template explicitly exposes Ollama's .Tools variable.
+        if (templateHasNativeTools) return;
 
         throw new InvalidOperationException(
-            $"Ollama model '{_options.Model}' does not support native tool calling. Choose a tool-capable model such as llama3.1 or qwen2.5.");
+            $"Unable to verify Ollama model '{_options.Model}' for native tool calling support because /api/show returned no capability metadata.");
+    }
+
+    private static bool HasToolCapability(JsonElement capabilities)
+    {
+        if (capabilities.ValueKind == JsonValueKind.Array)
+            return capabilities.EnumerateArray().Any(capability => capability.ValueKind == JsonValueKind.String &&
+                string.Equals(capability.GetString(), "tools", StringComparison.OrdinalIgnoreCase));
+        if (capabilities.ValueKind == JsonValueKind.Object && capabilities.TryGetProperty("tools", out var tools))
+            return tools.ValueKind == JsonValueKind.True ||
+                (tools.ValueKind == JsonValueKind.String && bool.TryParse(tools.GetString(), out var enabled) && enabled);
+        return capabilities.ValueKind == JsonValueKind.String &&
+            string.Equals(capabilities.GetString(), "tools", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string TryReadError(string body)
+    {
+        try
+        {
+            using var document = JsonDocument.Parse(body);
+            return document.RootElement.TryGetProperty("error", out var error) ? error.GetString() ?? string.Empty : string.Empty;
+        }
+        catch (JsonException) { return string.Empty; }
     }
 
 
@@ -402,7 +448,11 @@ public class OllamaProvider : IAIProvider
 
                             ["name"] = toolCall.Name,
 
-                            ["arguments"] = toolCall.ArgumentsJson
+                            // Ollama expects native function arguments to remain a JSON
+                            // object when an assistant tool call is replayed. Sending the
+                            // serialized JSON as a string causes modern model templates
+                            // (including llama3.1) to try to parse a double-encoded value.
+                            ["arguments"] = DeserializeToolArguments(toolCall.ArgumentsJson)
 
                         }
 
@@ -425,6 +475,21 @@ public class OllamaProvider : IAIProvider
             };
 
         }).ToList();
+
+    private static JsonElement DeserializeToolArguments(string argumentsJson)
+    {
+        try
+        {
+            var arguments = JsonSerializer.Deserialize<JsonElement>(argumentsJson);
+            return arguments.ValueKind == JsonValueKind.Object
+                ? arguments
+                : JsonSerializer.Deserialize<JsonElement>("{}");
+        }
+        catch (JsonException)
+        {
+            return JsonSerializer.Deserialize<JsonElement>("{}");
+        }
+    }
 
 
 

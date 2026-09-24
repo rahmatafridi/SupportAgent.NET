@@ -801,3 +801,13 @@ GET    /api/knowledge/documents
 GET    /api/knowledge/documents/{id}
 DELETE /api/knowledge/documents/{id}
 ```
+
+## Support Workspace
+
+The tenant-scoped support workspace provides server-side ticket search by ticket ID, subject, customer name, or customer email. Status and priority filters, an assigned-to-me filter, and newest, oldest, priority, or recently-updated sorting can be combined in one request.
+
+Admin and SupportAgent users can assign tickets to an active Admin or SupportAgent in the same organization, assign a ticket to themselves, update ticket state, reply to customers, and maintain a separate internal-notes timeline. Internal notes are never mixed into the customer conversation and are unavailable to Viewer users.
+
+Each ticket shows compact customer context, the three most recent orders, the three most recent related tickets, created and updated timestamps, and tenant-scoped summary counts for open, in-progress, high-priority, unassigned, and closed-today tickets.
+
+The AI panel can return an answer, confidence score, sources, and optional suggested actions. Suggested actions are advisory only. **Use Draft** copies an AI-generated draft into the normal agent reply editor for review and editing; it does not send the message. AI never sends replies, changes ticket status or priority, or assigns tickets automatically.

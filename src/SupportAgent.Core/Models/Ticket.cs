@@ -25,9 +25,17 @@ public class Ticket
     /// <summary>Date and time when the ticket was created.</summary>
     public DateTime CreatedAt { get; set; }
 
+    /// <summary>Date and time when the ticket was last changed.</summary>
+    public DateTime UpdatedAt { get; set; }
+
+    /// <summary>Optional application user currently responsible for the ticket.</summary>
+    public Guid? AssignedToUserId { get; set; }
+
     /// <summary>Navigation property for the related customer.</summary>
     public Customer Customer { get; set; } = null!;
 
     /// <summary>Messages exchanged on this ticket.</summary>
     public ICollection<TicketMessage> Messages { get; set; } = new List<TicketMessage>();
+
+    public ICollection<TicketInternalNote> InternalNotes { get; set; } = new List<TicketInternalNote>();
 }

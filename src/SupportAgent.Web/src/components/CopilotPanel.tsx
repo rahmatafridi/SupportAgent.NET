@@ -113,6 +113,8 @@ export function CopilotPanel({ ticketId, onUseDraft }: CopilotPanelProps) {
         <div className="copilot-answer">
           <h3>Answer</h3>
           <p>{answer.answer}</p>
+          <p className="draft-meta">Confidence: {answer.confidence.toFixed(2)}</p>
+          {answer.suggestedActions.length > 0 && <div className="suggested-actions"><strong>Suggested actions</strong><ul>{answer.suggestedActions.map(action => <li key={action}>{action}</li>)}</ul><small>Advisory only — no action is performed automatically.</small></div>}
           {answer.toolsUsed.length > 0 && (
             <div className="chat-tools">
               <strong>Tools used:</strong>
@@ -138,6 +140,7 @@ export function CopilotPanel({ ticketId, onUseDraft }: CopilotPanelProps) {
               </ul>
             </div>
           )}
+          {answer.sources.length === 0 && <p className="empty-copy">No AI sources.</p>}
         </div>
       )}
 

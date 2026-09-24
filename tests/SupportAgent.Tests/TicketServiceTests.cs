@@ -3,6 +3,8 @@ using Microsoft.EntityFrameworkCore;
 using SupportAgent.Core.Interfaces;
 using SupportAgent.Core.Models;
 using SupportAgent.Infrastructure.Data;
+using SupportAgent.Infrastructure.Identity;
+using Microsoft.AspNetCore.Identity;
 
 namespace SupportAgent.Tests;
 
@@ -66,6 +68,57 @@ public class TicketServiceTests
         var ticket = await service.GetTicketAsync(9999);
 
         Assert.Null(ticket);
+    }
+
+    [Fact]
+    public async Task Search_filters_and_sorting_are_combined()
+    {
+        await using var context = TestDbContextFactory.CreateContext(nameof(Search_filters_and_sorting_are_combined));
+        await TestDbContextFactory.SeedSampleDataAsync(context);
+        context.Tickets.Add(new Ticket { Id = 1002, CustomerId = 101, Subject = "Delivery delayed", Status = "Closed", Priority = "Low", CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow });
+        await context.SaveChangesAsync();
+        var service = new TicketService(context);
+        Assert.Single(await service.GetTicketsAsync(new TicketQuery { Search = "order", Status = "Open", Priority = "High" }));
+        Assert.Equal(2, (await service.GetTicketsAsync(new TicketQuery { Search = "John Smith" })).Count);
+        Assert.Equal(1002, (await service.GetTicketsAsync(new TicketQuery { Sort = "newest" }))[0].Id);
+    }
+
+    [Fact]
+    public async Task Assignment_requires_same_tenant_support_user_and_updates_timestamp()
+    {
+        var tenant = Guid.NewGuid(); var otherTenant = Guid.NewGuid(); var current = Guid.NewGuid(); var assignee = Guid.NewGuid(); var outsider = Guid.NewGuid();
+        await using var context = CreateContext(nameof(Assignment_requires_same_tenant_support_user_and_updates_timestamp), tenant, current);
+        var role = new IdentityRole<Guid>(ApplicationRoles.SupportAgent) { Id = Guid.NewGuid(), NormalizedName = ApplicationRoles.SupportAgent.ToUpperInvariant() };
+        context.Roles.Add(role);
+        context.Users.AddRange(
+            new ApplicationUser { Id = current, OrganizationId = tenant, DisplayName = "Current Agent", UserName = "current", IsActive = true },
+            new ApplicationUser { Id = assignee, OrganizationId = tenant, DisplayName = "Other Agent", UserName = "other", IsActive = true },
+            new ApplicationUser { Id = outsider, OrganizationId = otherTenant, DisplayName = "Outsider", UserName = "outside", IsActive = true });
+        context.UserRoles.AddRange(new IdentityUserRole<Guid> { UserId = current, RoleId = role.Id }, new IdentityUserRole<Guid> { UserId = assignee, RoleId = role.Id }, new IdentityUserRole<Guid> { UserId = outsider, RoleId = role.Id });
+        context.Customers.Add(new Customer { Id = 1, OrganizationId = tenant, FirstName = "A", LastName = "B", Email = "a@b.com" });
+        context.Tickets.Add(new Ticket { Id = 1, OrganizationId = tenant, CustomerId = 1, Subject = "Test", Status = "Open", Priority = "Medium", CreatedAt = DateTime.UtcNow.AddDays(-1), UpdatedAt = DateTime.UtcNow.AddDays(-1) });
+        await context.SaveChangesAsync(); var service = new TicketService(context, new UserContext(tenant, current));
+        Assert.Equal(assignee, (await service.UpdateAssigneeAsync(1, assignee))!.AssignedToUserId);
+        Assert.Equal(current, (await service.AssignToCurrentUserAsync(1))!.AssignedToUserId);
+        await Assert.ThrowsAsync<ArgumentException>(() => service.UpdateAssigneeAsync(1, outsider));
+    }
+
+    [Fact]
+    public async Task Notes_context_summary_and_updated_time_are_tenant_scoped()
+    {
+        var tenant = Guid.NewGuid(); var user = Guid.NewGuid();
+        await using var context = CreateContext(nameof(Notes_context_summary_and_updated_time_are_tenant_scoped), tenant, user);
+        var created = DateTime.UtcNow.AddDays(-2);
+        context.Customers.Add(new Customer { Id = 10, OrganizationId = tenant, FirstName = "Jane", LastName = "Doe", Email = "jane@example.com", Phone = "123" });
+        context.Orders.Add(new Order { Id = 10, OrganizationId = tenant, CustomerId = 10, OrderNumber = "ORD-10", Status = "Shipped", TotalAmount = 50, CreatedAt = created });
+        context.Tickets.AddRange(
+            new Ticket { Id = 10, OrganizationId = tenant, CustomerId = 10, Subject = "Current", Status = "Open", Priority = "High", CreatedAt = created, UpdatedAt = created },
+            new Ticket { Id = 11, OrganizationId = tenant, CustomerId = 10, Subject = "Previous", Status = "Closed", Priority = "Low", CreatedAt = created, UpdatedAt = DateTime.UtcNow });
+        await context.SaveChangesAsync(); var service = new TicketService(context, new UserContext(tenant, user));
+        var note = await service.AddInternalNoteAsync(10, "Waiting for carrier confirmation.");
+        Assert.NotNull(note); Assert.Equal(user, note.AuthorUserId); Assert.True((await service.GetTicketAsync(10))!.UpdatedAt > created);
+        Assert.Single((await service.GetCustomerContextAsync(10))!.RecentOrders); Assert.Single((await service.GetCustomerContextAsync(10))!.RecentTickets);
+        var summary = await service.GetSummaryAsync(); Assert.Equal(1, summary.Open); Assert.Equal(1, summary.HighPriority); Assert.Equal(1, summary.Unassigned);
     }
 
     private static SupportAgentDbContext CreateContext(string name, Guid tenant, Guid user) =>

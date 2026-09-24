@@ -39,6 +39,15 @@ public class Phase91IntegrationTests : IClassFixture<Phase8ApplicationFactory>
         var viewer = await LoginAsync(ApplicationRoles.Viewer);
         Assert.Equal(HttpStatusCode.Forbidden, (await SendAsync(viewer.Client, HttpMethod.Post, "/api/tickets", new { customerId = 1, subject = "Subject", priority = "Medium", message = "Message" }, viewer.Token)).StatusCode);
         Assert.Equal(HttpStatusCode.Forbidden, (await SendAsync(viewer.Client, HttpMethod.Post, "/api/tickets/1/messages", new { message = "Reply" }, viewer.Token)).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await SendAsync(viewer.Client, HttpMethod.Post, "/api/tickets/1/notes", new { content = "Private note" }, viewer.Token)).StatusCode);
+    }
+
+    [Fact]
+    public async Task Ticket_list_does_not_require_assigned_to_me_query_parameter()
+    {
+        var session = await LoginAsync(ApplicationRoles.Admin);
+        var response = await session.Client.GetAsync("/api/tickets");
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }
 
     [Fact]
@@ -50,6 +59,7 @@ public class Phase91IntegrationTests : IClassFixture<Phase8ApplicationFactory>
         var ticket = (await create.Content.ReadFromJsonAsync<TicketResult>())!;
         Assert.Equal(HttpStatusCode.NotFound, (await SendAsync(tenantB.Client, HttpMethod.Patch, $"/api/tickets/{ticket.Id}/status", new { status = "Closed" }, tenantB.Token)).StatusCode);
         Assert.Equal(HttpStatusCode.NotFound, (await SendAsync(tenantB.Client, HttpMethod.Post, $"/api/tickets/{ticket.Id}/messages", new { message = "Cross tenant" }, tenantB.Token)).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await SendAsync(tenantB.Client, HttpMethod.Post, $"/api/tickets/{ticket.Id}/notes", new { content = "Cross tenant" }, tenantB.Token)).StatusCode);
         Assert.Equal(HttpStatusCode.NotFound, (await SendAsync(tenantB.Client, HttpMethod.Post, "/api/tickets", new { customerId, subject = "Invalid", priority = "Low", message = "Invalid" }, tenantB.Token)).StatusCode);
     }
 

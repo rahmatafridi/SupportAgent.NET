@@ -57,7 +57,8 @@ public static class TestDbContextFactory
             Subject = "Where is my order?",
             Status = "Open",
             Priority = "High",
-            CreatedAt = createdAt
+            CreatedAt = createdAt,
+            UpdatedAt = createdAt
         });
 
         context.TicketMessages.AddRange(

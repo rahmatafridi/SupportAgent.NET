@@ -24,6 +24,8 @@ public record CopilotAskRequest(
 public record CopilotAskResponse(
     Guid ConversationId,
     string Answer,
+    IReadOnlyList<string> SuggestedActions,
+    double Confidence,
     IReadOnlyList<ToolUsageResponse> ToolsUsed,
     IReadOnlyList<KnowledgeSourceResponse> Sources);
 
@@ -87,6 +89,8 @@ public static class CopilotEndpoints
                 return Results.Ok(new CopilotAskResponse(
                     result.ConversationId,
                     result.Answer,
+                    result.SuggestedActions,
+                    result.Confidence,
                     MapToolsUsed(result.ToolsUsed),
                     MapSources(result.Sources)));
             }

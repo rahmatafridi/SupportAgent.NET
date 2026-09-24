@@ -64,7 +64,8 @@ public class CopilotService : ICopilotService
 
         var aiRequest = BuildAskRequest(ticket, ticketMessages, history);
         var response = await _aiGateway.GenerateAsync(aiRequest, cancellationToken);
-        var answer = response.Text ?? string.Empty;
+        var structured = CopilotSupportResponseParser.Parse(response.Text ?? string.Empty);
+        var answer = structured.Answer;
 
         await _conversationService.AddMessageAsync(
             conversation.Id,
@@ -79,6 +80,8 @@ public class CopilotService : ICopilotService
             Usage = response,
             ConversationId = conversation.Id,
             Answer = answer,
+            SuggestedActions = structured.SuggestedActions,
+            Confidence = structured.Confidence,
             ToolsUsed = response.ToolsUsed,
             Sources = response.Sources
         };

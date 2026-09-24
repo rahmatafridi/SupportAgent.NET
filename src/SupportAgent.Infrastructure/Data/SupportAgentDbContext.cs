@@ -70,6 +70,7 @@ public class SupportAgentDbContext : IdentityDbContext<ApplicationUser, Identity
 
     /// <summary>Messages posted inside support tickets.</summary>
     public DbSet<TicketMessage> TicketMessages => Set<TicketMessage>();
+    public DbSet<TicketInternalNote> TicketInternalNotes => Set<TicketInternalNote>();
 
     /// <summary>Company knowledge documents used for grounded support answers.</summary>
     public DbSet<KnowledgeDocument> KnowledgeDocuments => Set<KnowledgeDocument>();
@@ -117,7 +118,7 @@ public class SupportAgentDbContext : IdentityDbContext<ApplicationUser, Identity
         });
         foreach (var entityType in new[]
         {
-            typeof(Customer), typeof(Order), typeof(Ticket), typeof(TicketMessage),
+            typeof(Customer), typeof(Order), typeof(Ticket), typeof(TicketMessage), typeof(TicketInternalNote),
             typeof(KnowledgeDocument), typeof(KnowledgeChunk), typeof(AIConversation),
             typeof(AIConversationMessage), typeof(AIConversationToolAudit), typeof(AIUsageRecord)
         })
@@ -130,6 +131,14 @@ public class SupportAgentDbContext : IdentityDbContext<ApplicationUser, Identity
         modelBuilder.ApplyConfiguration(new OrderConfiguration());
         modelBuilder.ApplyConfiguration(new TicketConfiguration());
         modelBuilder.ApplyConfiguration(new TicketMessageConfiguration());
+        modelBuilder.Entity<TicketInternalNote>(builder =>
+        {
+            builder.ToTable("TicketInternalNotes");
+            builder.Property(x => x.Content).HasMaxLength(4000).IsRequired();
+            builder.HasIndex(x => new { x.OrganizationId, x.TicketId, x.CreatedAt });
+            builder.HasOne(x => x.Ticket).WithMany(x => x.InternalNotes).HasForeignKey(x => x.TicketId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
         modelBuilder.ApplyConfiguration(new KnowledgeDocumentConfiguration());
         modelBuilder.ApplyConfiguration(new KnowledgeChunkConfiguration());
         modelBuilder.ApplyConfiguration(new AIConversationConfiguration());
@@ -140,6 +149,7 @@ public class SupportAgentDbContext : IdentityDbContext<ApplicationUser, Identity
         modelBuilder.Entity<Order>().HasQueryFilter(x => x.OrganizationId == _currentUser.OrganizationId);
         modelBuilder.Entity<Ticket>().HasQueryFilter(x => x.OrganizationId == _currentUser.OrganizationId);
         modelBuilder.Entity<TicketMessage>().HasQueryFilter(x => x.OrganizationId == _currentUser.OrganizationId);
+        modelBuilder.Entity<TicketInternalNote>().HasQueryFilter(x => x.OrganizationId == _currentUser.OrganizationId);
         modelBuilder.Entity<KnowledgeDocument>().HasQueryFilter(x => x.OrganizationId == _currentUser.OrganizationId);
         modelBuilder.Entity<KnowledgeChunk>().HasQueryFilter(x => x.OrganizationId == _currentUser.OrganizationId);
         modelBuilder.Entity<AIConversation>().HasQueryFilter(x => x.OrganizationId == _currentUser.OrganizationId);

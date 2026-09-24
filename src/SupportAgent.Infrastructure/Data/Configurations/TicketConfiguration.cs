@@ -34,6 +34,10 @@ public class TicketConfiguration : IEntityTypeConfiguration<Ticket>
         builder.Property(ticket => ticket.CreatedAt)
             .IsRequired();
 
+        builder.Property(ticket => ticket.UpdatedAt).IsRequired();
+        builder.HasIndex(ticket => new { ticket.OrganizationId, ticket.UpdatedAt });
+        builder.HasIndex(ticket => new { ticket.OrganizationId, ticket.AssignedToUserId });
+
         builder.HasMany(ticket => ticket.Messages)
             .WithOne(message => message.Ticket)
             .HasForeignKey(message => message.TicketId)

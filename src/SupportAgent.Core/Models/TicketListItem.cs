@@ -22,4 +22,10 @@ public class TicketListItem
 
     /// <summary>Display name for the related customer.</summary>
     public string CustomerName { get; set; } = string.Empty;
+
+    public string CustomerEmail { get; set; } = string.Empty;
+    public Guid? AssignedToUserId { get; set; }
+    public string? AssignedToName { get; set; }
+    public DateTime CreatedAt { get; set; }
+    public DateTime UpdatedAt { get; set; }
 }

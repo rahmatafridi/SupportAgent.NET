@@ -17,7 +17,16 @@ public interface ITicketService
     /// Gets all support tickets with basic customer information for list views.
     /// </summary>
     Task<IReadOnlyList<TicketListItem>> GetTicketsAsync(
+        TicketQuery? query = null,
         CancellationToken cancellationToken = default);
+
+    Task<Ticket?> UpdateAssigneeAsync(int ticketId, Guid? assignedToUserId, CancellationToken cancellationToken = default);
+    Task<Ticket?> AssignToCurrentUserAsync(int ticketId, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<TicketAssignee>> GetAssigneesAsync(CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<TicketInternalNote>> GetInternalNotesAsync(int ticketId, CancellationToken cancellationToken = default);
+    Task<TicketInternalNote?> AddInternalNoteAsync(int ticketId, string content, CancellationToken cancellationToken = default);
+    Task<TicketCustomerContext?> GetCustomerContextAsync(int ticketId, CancellationToken cancellationToken = default);
+    Task<TicketSummary> GetSummaryAsync(CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Gets one support ticket by ID from the database.

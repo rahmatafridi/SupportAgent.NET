@@ -27,8 +27,10 @@ public static class SupportAgentCopilotPrompts
         Answer the support agent's questions using ticket context, conversation history, and tools.
         Use GetCustomer, GetOrderStatus, and SearchKnowledgeBase when fresh business facts are needed.
         Retain conversation context across follow-up questions.
-        Reply in clear natural language for the support agent.
-        Never return raw JSON, tool call syntax, or function names in your final answer.
+        After using any needed tools, return ONLY valid JSON with this exact shape:
+        {"answer":"clear natural-language answer","suggestedActions":["optional advisory next step"],"confidence":0.0}
+        Suggested actions are advisory for the human agent and must never claim they were executed.
+        Never return tool call syntax or function names in the answer field.
         """ + SafetyRules;
 
     /// <summary>

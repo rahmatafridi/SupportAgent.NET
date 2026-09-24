@@ -9,6 +9,8 @@ export interface CopilotAskRequest {
 export interface CopilotAskResponse {
   conversationId: string
   answer: string
+  suggestedActions: string[]
+  confidence: number
   toolsUsed: ToolUsage[]
   sources: KnowledgeSource[]
 }

@@ -30,6 +30,7 @@ public interface ICopilotService
 /// </summary>
 public class CopilotAskResult
 {
+    public AIResponse Usage { get; set; } = new();
     /// <summary>Persisted conversation identifier.</summary>
     public Guid ConversationId { get; set; }
 
@@ -48,6 +49,7 @@ public class CopilotAskResult
 /// </summary>
 public class CopilotDraftResult
 {
+    public AIResponse Usage { get; set; } = new();
     /// <summary>Structured suggested reply for human review.</summary>
     public CopilotDraftReply Draft { get; set; } = new();
 

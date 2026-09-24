@@ -8,6 +8,8 @@ public class AIConversation
     /// <summary>Unique conversation identifier.</summary>
     public Guid Id { get; set; }
 
+    public Guid OrganizationId { get; set; }
+
     /// <summary>Optional linked support ticket.</summary>
     public int? TicketId { get; set; }
 

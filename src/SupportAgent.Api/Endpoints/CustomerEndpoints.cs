@@ -28,6 +28,7 @@ public static class CustomerEndpoints
                 : Results.Ok(customer);
         })
         .WithName("GetCustomer")
+        .RequireAuthorization()
         .WithSummary("Gets a customer by ID.")
         .WithDescription("Returns customer details from SQL Server via ICustomerService.GetCustomerAsync.");
 

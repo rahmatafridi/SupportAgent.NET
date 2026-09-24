@@ -8,6 +8,8 @@ public class AIConversationToolAudit
     /// <summary>Unique audit record identifier.</summary>
     public Guid Id { get; set; }
 
+    public Guid OrganizationId { get; set; }
+
     /// <summary>Parent conversation identifier.</summary>
     public Guid AIConversationId { get; set; }
 

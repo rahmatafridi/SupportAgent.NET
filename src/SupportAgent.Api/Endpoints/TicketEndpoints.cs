@@ -23,6 +23,7 @@ public static class TicketEndpoints
             return Results.Ok(tickets);
         })
         .WithName("GetTickets")
+        .RequireAuthorization()
         .WithSummary("Lists support tickets.")
         .WithDescription("Returns ticket summaries with customer information for the support workspace.");
 
@@ -40,6 +41,7 @@ public static class TicketEndpoints
                 : Results.Ok(ticket);
         })
         .WithName("GetTicket")
+        .RequireAuthorization()
         .WithSummary("Gets a support ticket by ID.")
         .WithDescription("Returns ticket details from SQL Server via ITicketService.GetTicketAsync.");
 
@@ -61,6 +63,7 @@ public static class TicketEndpoints
             return Results.Ok(messages);
         })
         .WithName("GetTicketMessages")
+        .RequireAuthorization()
         .WithSummary("Gets messages for a support ticket.")
         .WithDescription("Returns ticket messages from SQL Server via ITicketService.GetTicketMessagesAsync.");
 

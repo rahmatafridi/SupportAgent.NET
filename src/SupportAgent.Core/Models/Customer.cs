@@ -8,6 +8,8 @@ public class Customer
     /// <summary>Unique customer identifier.</summary>
     public int Id { get; set; }
 
+    public Guid OrganizationId { get; set; }
+
     /// <summary>Customer first name.</summary>
     public string FirstName { get; set; } = string.Empty;
 

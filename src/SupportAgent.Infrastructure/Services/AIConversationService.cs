@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using SupportAgent.Core.Interfaces;
 using SupportAgent.Core.Models;
 using SupportAgent.Infrastructure.Data;
+using SupportAgent.Infrastructure.Identity;
 
 namespace SupportAgent.Infrastructure.Services;
 
@@ -11,13 +12,15 @@ namespace SupportAgent.Infrastructure.Services;
 public class AIConversationService : IAIConversationService
 {
     private readonly SupportAgentDbContext _dbContext;
+    private readonly ICurrentUserContext _currentUser;
 
     /// <summary>
     /// Creates a new conversation service instance.
     /// </summary>
-    public AIConversationService(SupportAgentDbContext dbContext)
+    public AIConversationService(SupportAgentDbContext dbContext, ICurrentUserContext? currentUser = null)
     {
         _dbContext = dbContext;
+        _currentUser = currentUser ?? new DefaultCurrentUserContext();
     }
 
     /// <inheritdoc />
@@ -29,6 +32,7 @@ public class AIConversationService : IAIConversationService
         var conversation = new AIConversation
         {
             Id = Guid.NewGuid(),
+            OrganizationId = _currentUser.OrganizationId,
             TicketId = ticketId,
             CreatedAt = now,
             UpdatedAt = now
@@ -67,6 +71,7 @@ public class AIConversationService : IAIConversationService
         var message = new AIConversationMessage
         {
             Id = Guid.NewGuid(),
+            OrganizationId = _currentUser.OrganizationId,
             AIConversationId = conversationId,
             Role = role,
             Content = content,
@@ -118,6 +123,7 @@ public class AIConversationService : IAIConversationService
         {
             audit.Id = audit.Id == Guid.Empty ? Guid.NewGuid() : audit.Id;
             audit.AIConversationId = conversationId;
+            audit.OrganizationId = _currentUser.OrganizationId;
         }
 
         conversation.UpdatedAt = DateTime.UtcNow;

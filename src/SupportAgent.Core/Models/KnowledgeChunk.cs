@@ -8,6 +8,8 @@ public class KnowledgeChunk
     /// <summary>Unique chunk identifier.</summary>
     public int Id { get; set; }
 
+    public Guid OrganizationId { get; set; }
+
     /// <summary>Parent knowledge document identifier.</summary>
     public int KnowledgeDocumentId { get; set; }
 

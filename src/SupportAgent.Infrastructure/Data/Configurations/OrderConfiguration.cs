@@ -23,7 +23,7 @@ public class OrderConfiguration : IEntityTypeConfiguration<Order>
             .IsRequired()
             .HasMaxLength(50);
 
-        builder.HasIndex(order => order.OrderNumber)
+        builder.HasIndex(order => new { order.OrganizationId, order.OrderNumber })
             .IsUnique();
 
         builder.Property(order => order.Status)

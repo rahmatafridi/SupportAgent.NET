@@ -1,8 +1,12 @@
 using System.Text.Json;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Antiforgery;
 using SupportAgent.Core.Interfaces;
 using SupportAgent.Core.Models;
 using SupportAgent.Core.Models.AI;
 using SupportAgent.Infrastructure.AI.Tools;
+using SupportAgent.Api.Authorization;
+using SupportAgent.Api.Security;
 
 namespace SupportAgent.Api.Endpoints;
 
@@ -58,6 +62,7 @@ public static class CopilotEndpoints
         app.MapPost("/api/copilot/ask", async (
             CopilotAskRequest request,
             ICopilotService copilotService,
+            IAIUsageService usageService,
             CancellationToken cancellationToken) =>
         {
             if (request.TicketId <= 0)
@@ -77,6 +82,7 @@ public static class CopilotEndpoints
                     request.ConversationId,
                     request.Message,
                     cancellationToken);
+                await usageService.RecordUsageAsync(result.Usage, "CopilotAsk", cancellationToken);
 
                 return Results.Ok(new CopilotAskResponse(
                     result.ConversationId,
@@ -90,12 +96,16 @@ public static class CopilotEndpoints
             }
         })
         .WithName("PostCopilotAsk")
+        .RequireAuthorization(AuthorizationPolicies.AiAccess)
+        .RequireRateLimiting("ai")
+        .AddEndpointFilter<AntiforgeryEndpointFilter>()
         .WithSummary("Asks the AI copilot a ticket-aware support question.")
         .WithDescription("Loads ticket context, persists conversation state, and allows native tool calling.");
 
         app.MapPost("/api/copilot/draft-reply", async (
             CopilotDraftRequest request,
             ICopilotService copilotService,
+            IAIUsageService usageService,
             CancellationToken cancellationToken) =>
         {
             if (request.TicketId <= 0)
@@ -106,6 +116,7 @@ public static class CopilotEndpoints
             try
             {
                 var result = await copilotService.DraftReplyAsync(request.TicketId, cancellationToken);
+                await usageService.RecordUsageAsync(result.Usage, "DraftReply", cancellationToken);
 
                 return Results.Ok(new CopilotDraftResponse(
                     new CopilotDraftResponseBody(
@@ -122,6 +133,9 @@ public static class CopilotEndpoints
             }
         })
         .WithName("PostCopilotDraftReply")
+        .RequireAuthorization(AuthorizationPolicies.AiAccess)
+        .RequireRateLimiting("ai")
+        .AddEndpointFilter<AntiforgeryEndpointFilter>()
         .WithSummary("Generates a suggested customer reply draft for human review.")
         .WithDescription("Does not send customer replies automatically.");
 

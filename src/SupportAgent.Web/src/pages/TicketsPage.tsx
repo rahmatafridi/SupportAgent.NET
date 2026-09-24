@@ -1,9 +1,10 @@
 import { Link } from 'react-router-dom'
 import { TicketList } from '../components/TicketList'
+import { AppHeader } from '../components/AppHeader'
 
 export function TicketsPage() {
   return (
-    <main className="workspace">
+    <><AppHeader /><main className="workspace">
       <header className="workspace-header">
         <div>
           <h1>Support Workspace</h1>
@@ -17,6 +18,6 @@ export function TicketsPage() {
           <p>Select a ticket from the list to open the support workspace.</p>
         </section>
       </div>
-    </main>
+    </main></>
   )
 }

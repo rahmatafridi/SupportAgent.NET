@@ -5,6 +5,7 @@ using SupportAgent.Core.Interfaces;
 using SupportAgent.Core.Models;
 using SupportAgent.Infrastructure.Data;
 using SupportAgent.Infrastructure.Knowledge;
+using SupportAgent.Infrastructure.Identity;
 
 namespace SupportAgent.Infrastructure.Services;
 
@@ -18,6 +19,7 @@ public class KnowledgeService : IKnowledgeService
     private readonly IEmbeddingService _embeddingService;
     private readonly KnowledgeSearchOptions _searchOptions;
     private readonly ILogger<KnowledgeService> _logger;
+    private readonly ICurrentUserContext _currentUser;
 
     /// <summary>
     /// Creates a new knowledge service instance.
@@ -27,13 +29,15 @@ public class KnowledgeService : IKnowledgeService
         ITextChunker textChunker,
         IEmbeddingService embeddingService,
         IOptions<KnowledgeSearchOptions> searchOptions,
-        ILogger<KnowledgeService> logger)
+        ILogger<KnowledgeService> logger,
+        ICurrentUserContext? currentUser = null)
     {
         _dbContext = dbContext;
         _textChunker = textChunker;
         _embeddingService = embeddingService;
         _searchOptions = searchOptions.Value;
         _logger = logger;
+        _currentUser = currentUser ?? new DefaultCurrentUserContext();
     }
 
     /// <inheritdoc />
@@ -56,6 +60,7 @@ public class KnowledgeService : IKnowledgeService
         var createdAt = DateTime.UtcNow;
         var document = new KnowledgeDocument
         {
+            OrganizationId = _currentUser.OrganizationId,
             Title = title.Trim(),
             Source = source?.Trim(),
             ContentType = "text",
@@ -72,6 +77,7 @@ public class KnowledgeService : IKnowledgeService
         {
             chunkEntities.Add(new KnowledgeChunk
             {
+                OrganizationId = _currentUser.OrganizationId,
                 KnowledgeDocumentId = document.Id,
                 Content = chunkTexts[index],
                 ChunkIndex = index,

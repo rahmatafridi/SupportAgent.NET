@@ -4,6 +4,7 @@ import type {
   CopilotDraftRequest,
   CopilotDraftResponse,
 } from '../types/copilot'
+import { apiFetch } from './api'
 
 function readApiErrorMessage(errorText: string, status: number): string {
   if (!errorText) {
@@ -23,7 +24,7 @@ function readApiErrorMessage(errorText: string, status: number): string {
 }
 
 export async function askCopilot(request: CopilotAskRequest): Promise<CopilotAskResponse> {
-  const response = await fetch('/api/copilot/ask', {
+  const response = await apiFetch('/api/copilot/ask', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(request),
@@ -40,7 +41,7 @@ export async function askCopilot(request: CopilotAskRequest): Promise<CopilotAsk
 export async function draftCopilotReply(
   request: CopilotDraftRequest,
 ): Promise<CopilotDraftResponse> {
-  const response = await fetch('/api/copilot/draft-reply', {
+  const response = await apiFetch('/api/copilot/draft-reply', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(request),

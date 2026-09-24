@@ -5,6 +5,8 @@ using SupportAgent.Core.Interfaces;
 using SupportAgent.Infrastructure.Data;
 using SupportAgent.Infrastructure.Knowledge;
 using SupportAgent.Infrastructure.Services;
+using Microsoft.AspNetCore.Identity;
+using SupportAgent.Infrastructure.Identity;
 
 namespace SupportAgent.Infrastructure;
 
@@ -13,6 +15,22 @@ namespace SupportAgent.Infrastructure;
 /// </summary>
 public static class DependencyInjection
 {
+    /// <summary>Applies pending EF Core migrations before database-backed seeders run.</summary>
+    public static async Task MigrateDatabaseAsync(this IServiceProvider serviceProvider)
+    {
+        using var scope = serviceProvider.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<SupportAgentDbContext>();
+        await dbContext.Database.MigrateAsync();
+    }
+
+    public static async Task SeedIdentityRolesAsync(this IServiceProvider serviceProvider)
+    {
+        using var scope = serviceProvider.CreateScope();
+        var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole<Guid>>>();
+        foreach (var role in new[] { ApplicationRoles.Admin, ApplicationRoles.SupportAgent, ApplicationRoles.Viewer })
+            if (!await roleManager.RoleExistsAsync(role))
+                await roleManager.CreateAsync(new IdentityRole<Guid>(role));
+    }
     /// <summary>
     /// Registers EF Core, SQL Server, and the customer/order/ticket business services.
     /// </summary>
@@ -40,6 +58,7 @@ public static class DependencyInjection
         services.AddScoped<IOrderService, OrderService>();
         services.AddScoped<ITicketService, TicketService>();
         services.AddScoped<IAIConversationService, AIConversationService>();
+        services.AddScoped<IAIUsageService, AIUsageService>();
         services.AddScoped<ICopilotService, CopilotService>();
         services.AddSingleton<ITextChunker, TextChunker>();
         services.AddScoped<IKnowledgeService, KnowledgeService>();
@@ -59,6 +78,11 @@ public static class DependencyInjection
     {
         using var scope = serviceProvider.CreateScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<SupportAgentDbContext>();
+        await IdentityDevelopmentSeeder.SeedAsync(
+            dbContext,
+            scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole<Guid>>>(),
+            scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>(),
+            cancellationToken);
         await DevelopmentDataSeeder.SeedAsync(dbContext, cancellationToken);
 
         var knowledgeService = scope.ServiceProvider.GetRequiredService<IKnowledgeService>();

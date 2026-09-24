@@ -18,7 +18,7 @@ public static class DevelopmentDataSeeder
         SupportAgentDbContext dbContext,
         CancellationToken cancellationToken = default)
     {
-        if (await dbContext.Customers.AnyAsync(cancellationToken))
+        if (await dbContext.Customers.IgnoreQueryFilters().AnyAsync(cancellationToken))
         {
             return;
         }

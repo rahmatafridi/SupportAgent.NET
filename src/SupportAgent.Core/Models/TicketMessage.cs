@@ -8,6 +8,8 @@ public class TicketMessage
     /// <summary>Unique message identifier.</summary>
     public int Id { get; set; }
 
+    public Guid OrganizationId { get; set; }
+
     /// <summary>Ticket this message belongs to.</summary>
     public int TicketId { get; set; }
 

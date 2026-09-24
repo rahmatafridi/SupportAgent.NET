@@ -708,3 +708,49 @@ Swagger UI (Development): **http://localhost:5191/swagger**
 ## License
 
 Open source. License to be added.
+# Authentication and Multi-Tenancy
+
+SupportAgent.NET uses ASP.NET Core Identity with GUID user and role keys. Every user belongs to one organization, and tenant-owned records carry an `OrganizationId` that is enforced by EF Core global query filters. The organization is read from the authenticated server-side claims context; it is never accepted from browser input or an LLM tool call.
+
+```text
+User
+  -> HTTP-only Identity cookie
+  -> Organization claim
+  -> tenant-scoped business services
+  -> constrained AI tools
+  -> tenant-scoped SQL data
+```
+
+Roles are enforced by backend authorization policies:
+
+- `Admin`: all tenant support data, AI, knowledge management, embedding rebuild, and AI usage reporting.
+- `SupportAgent`: support data, AI/copilot, suggested reply drafts, and knowledge search.
+- `Viewer`: read-only customer, order, ticket, and ticket-message access. No AI, knowledge, or administration access.
+
+Self-registration is controlled by `Authentication:AllowSelfRegistration`. It defaults to `false` and is enabled in Development. Registering creates a new organization and its first Admin. Organization slugs are normalized and protected by a unique database index.
+
+Authentication uses an HTTP-only cookie; the React application stores no token in local storage. Before a state-changing request, React calls `GET /api/auth/csrf`, receives an antiforgery request token, and sends it in the `X-CSRF-TOKEN` header. ASP.NET Core validates that token against its antiforgery cookie. Login, registration, logout, AI requests, and knowledge writes are protected by this mechanism.
+
+Development-only users are seeded under **SupportAgent Demo**:
+
+| Role | Email | Development password |
+| --- | --- | --- |
+| Admin | `admin@supportagent.local` | `SupportAgent123!` |
+| SupportAgent | `agent@supportagent.local` | `SupportAgent123!` |
+| Viewer | `viewer@supportagent.local` | `SupportAgent123!` |
+
+These accounts are created only when the API runs in Development. Apply migrations before starting the updated application:
+
+```powershell
+dotnet ef database update --project src/SupportAgent.Infrastructure --startup-project src/SupportAgent.Api
+```
+
+## AI Usage Tracking
+
+Successful Chat, CopilotAsk, and DraftReply operations record organization, user, provider, model, input/output/total tokens, duration, request type, and timestamp. Prompts and responses are not copied into usage records. Admins can view their current organization’s monthly totals at `GET /api/admin/ai-usage` or `/admin/usage`.
+
+AI-heavy endpoints use ASP.NET Core partitioned rate limiting, keyed by authenticated user ID. Configure the per-minute limit with `RateLimiting:AIRequestsPerMinute`.
+
+AI provider keys remain backend-only. AI tools keep their original schemas and cannot choose an organization. Suggested replies remain drafts for human review and are never sent automatically.
+
+> SupportAgent.NET is a starter/reference project. Perform a full security review, configure production HTTPS/cookie policy, secrets, monitoring, and operational controls before deploying it to production.

@@ -8,6 +8,8 @@ public class Order
     /// <summary>Unique order identifier.</summary>
     public int Id { get; set; }
 
+    public Guid OrganizationId { get; set; }
+
     /// <summary>Customer who placed the order.</summary>
     public int CustomerId { get; set; }
 

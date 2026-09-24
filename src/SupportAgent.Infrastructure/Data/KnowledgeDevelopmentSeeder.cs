@@ -19,7 +19,7 @@ public static class KnowledgeDevelopmentSeeder
         IKnowledgeService knowledgeService,
         CancellationToken cancellationToken = default)
     {
-        if (await dbContext.KnowledgeDocuments.AnyAsync(cancellationToken))
+        if (await dbContext.KnowledgeDocuments.IgnoreQueryFilters().AnyAsync(cancellationToken))
         {
             return;
         }

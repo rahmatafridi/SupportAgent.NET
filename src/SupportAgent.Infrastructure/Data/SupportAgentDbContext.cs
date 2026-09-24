@@ -1,21 +1,62 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
+using SupportAgent.Core.Interfaces;
 using SupportAgent.Core.Models;
 using SupportAgent.Infrastructure.Data.Configurations;
+using SupportAgent.Infrastructure.Identity;
 
 namespace SupportAgent.Infrastructure.Data;
 
 /// <summary>
 /// Entity Framework Core database context for customers, orders, tickets, and ticket messages.
 /// </summary>
-public class SupportAgentDbContext : DbContext
+public class SupportAgentDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Guid>, Guid>
 {
+    private readonly ICurrentUserContext _currentUser;
     /// <summary>
     /// Creates a new database context instance.
     /// </summary>
     /// <param name="options">EF Core options configured with the SQL Server connection string.</param>
-    public SupportAgentDbContext(DbContextOptions<SupportAgentDbContext> options)
+    public SupportAgentDbContext(
+        DbContextOptions<SupportAgentDbContext> options,
+        ICurrentUserContext currentUser)
         : base(options)
     {
+        _currentUser = currentUser;
+    }
+
+    public SupportAgentDbContext(DbContextOptions<SupportAgentDbContext> options)
+        : this(options, new DefaultCurrentUserContext())
+    {
+    }
+
+    public DbSet<Organization> Organizations => Set<Organization>();
+    public DbSet<AIUsageRecord> AIUsageRecords => Set<AIUsageRecord>();
+
+    public override int SaveChanges(bool acceptAllChangesOnSuccess)
+    {
+        AssignTenantToAddedEntities();
+        return base.SaveChanges(acceptAllChangesOnSuccess);
+    }
+
+    public override Task<int> SaveChangesAsync(bool acceptAllChangesOnSuccess, CancellationToken cancellationToken = default)
+    {
+        AssignTenantToAddedEntities();
+        return base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);
+    }
+
+    private void AssignTenantToAddedEntities()
+    {
+        var organizationId = _currentUser.OrganizationId == Guid.Empty
+            ? TenantDefaults.DemoOrganizationId
+            : _currentUser.OrganizationId;
+        foreach (var entry in ChangeTracker.Entries().Where(x => x.State == EntityState.Added))
+        {
+            var property = entry.Metadata.FindProperty("OrganizationId");
+            if (property is not null && (Guid)entry.Property("OrganizationId").CurrentValue! == Guid.Empty)
+                entry.Property("OrganizationId").CurrentValue = organizationId;
+        }
     }
 
     /// <summary>Customer records used by support tools and API endpoints.</summary>
@@ -51,6 +92,40 @@ public class SupportAgentDbContext : DbContext
     /// <param name="modelBuilder">The EF Core model builder.</param>
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        base.OnModelCreating(modelBuilder);
+
+        modelBuilder.Entity<Organization>(builder =>
+        {
+            builder.Property(x => x.Name).HasMaxLength(200).IsRequired();
+            builder.Property(x => x.Slug).HasMaxLength(200).IsRequired();
+            builder.HasIndex(x => x.Slug).IsUnique();
+        });
+        modelBuilder.Entity<ApplicationUser>(builder =>
+        {
+            builder.Property(x => x.DisplayName).HasMaxLength(200).IsRequired();
+            builder.HasOne(x => x.Organization).WithMany().HasForeignKey(x => x.OrganizationId)
+                .OnDelete(DeleteBehavior.Restrict);
+            builder.HasIndex(x => new { x.OrganizationId, x.NormalizedEmail });
+        });
+        modelBuilder.Entity<AIUsageRecord>(builder =>
+        {
+            builder.Property(x => x.Provider).HasMaxLength(100).IsRequired();
+            builder.Property(x => x.Model).HasMaxLength(200).IsRequired();
+            builder.Property(x => x.RequestType).HasMaxLength(50).IsRequired();
+            builder.HasIndex(x => new { x.OrganizationId, x.CreatedAt });
+            builder.HasQueryFilter(x => x.OrganizationId == _currentUser.OrganizationId);
+        });
+        foreach (var entityType in new[]
+        {
+            typeof(Customer), typeof(Order), typeof(Ticket), typeof(TicketMessage),
+            typeof(KnowledgeDocument), typeof(KnowledgeChunk), typeof(AIConversation),
+            typeof(AIConversationMessage), typeof(AIConversationToolAudit), typeof(AIUsageRecord)
+        })
+        {
+            modelBuilder.Entity(entityType).HasOne(typeof(Organization)).WithMany()
+                .HasForeignKey("OrganizationId").OnDelete(DeleteBehavior.Restrict);
+            modelBuilder.Entity(entityType).HasIndex("OrganizationId");
+        }
         modelBuilder.ApplyConfiguration(new CustomerConfiguration());
         modelBuilder.ApplyConfiguration(new OrderConfiguration());
         modelBuilder.ApplyConfiguration(new TicketConfiguration());
@@ -60,5 +135,15 @@ public class SupportAgentDbContext : DbContext
         modelBuilder.ApplyConfiguration(new AIConversationConfiguration());
         modelBuilder.ApplyConfiguration(new AIConversationMessageConfiguration());
         modelBuilder.ApplyConfiguration(new AIConversationToolAuditConfiguration());
+
+        modelBuilder.Entity<Customer>().HasQueryFilter(x => x.OrganizationId == _currentUser.OrganizationId);
+        modelBuilder.Entity<Order>().HasQueryFilter(x => x.OrganizationId == _currentUser.OrganizationId);
+        modelBuilder.Entity<Ticket>().HasQueryFilter(x => x.OrganizationId == _currentUser.OrganizationId);
+        modelBuilder.Entity<TicketMessage>().HasQueryFilter(x => x.OrganizationId == _currentUser.OrganizationId);
+        modelBuilder.Entity<KnowledgeDocument>().HasQueryFilter(x => x.OrganizationId == _currentUser.OrganizationId);
+        modelBuilder.Entity<KnowledgeChunk>().HasQueryFilter(x => x.OrganizationId == _currentUser.OrganizationId);
+        modelBuilder.Entity<AIConversation>().HasQueryFilter(x => x.OrganizationId == _currentUser.OrganizationId);
+        modelBuilder.Entity<AIConversationMessage>().HasQueryFilter(x => x.OrganizationId == _currentUser.OrganizationId);
+        modelBuilder.Entity<AIConversationToolAudit>().HasQueryFilter(x => x.OrganizationId == _currentUser.OrganizationId);
     }
 }

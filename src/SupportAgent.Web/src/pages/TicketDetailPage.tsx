@@ -2,10 +2,14 @@ import { Link, useParams } from 'react-router-dom'
 import { TicketList } from '../components/TicketList'
 import { TicketConversation } from '../components/TicketConversation'
 import { CopilotPanel } from '../components/CopilotPanel'
+import { AppHeader } from '../components/AppHeader'
+import { useAuth } from '../auth/AuthContext'
 
 export function TicketDetailPage() {
   const { id } = useParams()
   const ticketId = Number(id)
+  const { user } = useAuth()
+  const canUseAi = user?.roles.some(role => role === 'Admin' || role === 'SupportAgent') === true
 
   if (!Number.isFinite(ticketId) || ticketId <= 0) {
     return (
@@ -17,7 +21,7 @@ export function TicketDetailPage() {
   }
 
   return (
-    <main className="workspace">
+    <><AppHeader /><main className="workspace">
       <header className="workspace-header">
         <div>
           <h1>Support Workspace</h1>
@@ -28,8 +32,8 @@ export function TicketDetailPage() {
       <div className="workspace-grid">
         <TicketList />
         <TicketConversation ticketId={ticketId} />
-        <CopilotPanel ticketId={ticketId} />
+        {canUseAi && <CopilotPanel ticketId={ticketId} />}
       </div>
-    </main>
+    </main></>
   )
 }

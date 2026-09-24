@@ -28,6 +28,7 @@ public static class OrderEndpoints
                 : Results.Ok(order);
         })
         .WithName("GetOrder")
+        .RequireAuthorization()
         .WithSummary("Gets an order by ID.")
         .WithDescription("Returns order details from SQL Server via IOrderService.GetOrderAsync.");
 
@@ -42,6 +43,7 @@ public static class OrderEndpoints
             return Results.Ok(orders);
         })
         .WithName("GetOrdersByCustomer")
+        .RequireAuthorization()
         .WithSummary("Gets all orders for a customer.")
         .WithDescription("Returns a list of orders for the given customer ID via IOrderService.GetOrdersByCustomerAsync.");
 

@@ -1,8 +1,12 @@
 using System.Text.Json;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Antiforgery;
 using SupportAgent.Core.Interfaces;
 using SupportAgent.Core.Models;
 using SupportAgent.Infrastructure.AI;
 using SupportAgent.Infrastructure.AI.Tools;
+using SupportAgent.Api.Authorization;
+using SupportAgent.Api.Security;
 
 namespace SupportAgent.Api.Endpoints;
 
@@ -63,6 +67,7 @@ public static class AIEndpoints
         app.MapPost("/api/ai/chat", async (
             ChatRequest request,
             IAIGateway aiGateway,
+            IAIUsageService usageService,
             CancellationToken cancellationToken) =>
         {
             if (string.IsNullOrWhiteSpace(request.Message))
@@ -80,6 +85,7 @@ public static class AIEndpoints
             try
             {
                 var response = await aiGateway.GenerateAsync(aiRequest, cancellationToken);
+                await usageService.RecordUsageAsync(response, "Chat", cancellationToken);
 
                 return Results.Ok(new ChatResponse(
                     response.Text ?? string.Empty,
@@ -96,6 +102,9 @@ public static class AIEndpoints
             }
         })
         .WithName("PostAIChat")
+        .RequireAuthorization(AuthorizationPolicies.AiAccess)
+        .RequireRateLimiting("ai")
+        .AddEndpointFilter<AntiforgeryEndpointFilter>()
         .WithSummary("Sends a chat message to the AI assistant.")
         .WithDescription("Uses native LLM tool calling through IAIGateway. The model may call GetCustomer, GetOrderStatus, or SearchKnowledgeBase before returning the final answer.");
 

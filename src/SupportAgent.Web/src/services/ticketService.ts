@@ -1,4 +1,5 @@
 import type { Ticket, TicketListItem, TicketMessage } from '../types/ticket'
+import { apiFetch } from './api'
 
 function readApiErrorMessage(errorText: string, status: number): string {
   if (!errorText) {
@@ -27,16 +28,16 @@ async function readJson<T>(response: Response): Promise<T> {
 }
 
 export async function fetchTickets(): Promise<TicketListItem[]> {
-  const response = await fetch('/api/tickets')
+  const response = await apiFetch('/api/tickets')
   return readJson<TicketListItem[]>(response)
 }
 
 export async function fetchTicket(ticketId: number): Promise<Ticket> {
-  const response = await fetch(`/api/tickets/${ticketId}`)
+  const response = await apiFetch(`/api/tickets/${ticketId}`)
   return readJson<Ticket>(response)
 }
 
 export async function fetchTicketMessages(ticketId: number): Promise<TicketMessage[]> {
-  const response = await fetch(`/api/tickets/${ticketId}/messages`)
+  const response = await apiFetch(`/api/tickets/${ticketId}/messages`)
   return readJson<TicketMessage[]>(response)
 }

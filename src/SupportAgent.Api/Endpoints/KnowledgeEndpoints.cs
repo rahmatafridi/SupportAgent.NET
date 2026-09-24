@@ -1,5 +1,9 @@
 using SupportAgent.Core.Interfaces;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Antiforgery;
 using SupportAgent.Core.Models;
+using SupportAgent.Api.Authorization;
+using SupportAgent.Api.Security;
 
 namespace SupportAgent.Api.Endpoints;
 
@@ -56,6 +60,8 @@ public static class KnowledgeEndpoints
             }
         })
         .WithName("PostKnowledgeDocument")
+        .RequireAuthorization(AuthorizationPolicies.AdminOnly)
+        .AddEndpointFilter<AntiforgeryEndpointFilter>()
         .WithSummary("Adds a company knowledge document.")
         .WithDescription("Stores the document and creates searchable chunks through IKnowledgeService.AddDocumentAsync.");
 
@@ -82,6 +88,7 @@ public static class KnowledgeEndpoints
             }
         })
         .WithName("SearchKnowledge")
+        .RequireAuthorization(AuthorizationPolicies.KnowledgeSearch)
         .WithSummary("Searches the company knowledge base.")
         .WithDescription("Returns ranked knowledge chunks from IKnowledgeService.SearchAsync for direct hybrid retrieval testing.");
 
@@ -102,6 +109,8 @@ public static class KnowledgeEndpoints
             }
         })
         .WithName("RebuildKnowledgeEmbeddings")
+        .RequireAuthorization(AuthorizationPolicies.AdminOnly)
+        .AddEndpointFilter<AntiforgeryEndpointFilter>()
         .WithSummary("Generates missing knowledge chunk embeddings.")
         .WithDescription("Temporary admin-oriented endpoint that backfills embeddings for chunks missing EmbeddingJson.");
 

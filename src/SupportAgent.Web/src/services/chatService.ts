@@ -1,4 +1,5 @@
 import type { ChatRequest, ChatResponse } from '../types/chat'
+import { apiFetch } from './api'
 
 function readApiErrorMessage(errorText: string, status: number): string {
   if (!errorText) {
@@ -18,7 +19,7 @@ function readApiErrorMessage(errorText: string, status: number): string {
 }
 
 export async function sendChatMessage(message: string): Promise<ChatResponse> {
-  const response = await fetch('/api/ai/chat', {
+  const response = await apiFetch('/api/ai/chat', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',

@@ -76,6 +76,7 @@ public class CopilotService : ICopilotService
 
         return new CopilotAskResult
         {
+            Usage = response,
             ConversationId = conversation.Id,
             Answer = answer,
             ToolsUsed = response.ToolsUsed,
@@ -109,6 +110,7 @@ public class CopilotService : ICopilotService
 
         return new CopilotDraftResult
         {
+            Usage = response,
             Draft = draft,
             ToolsUsed = response.ToolsUsed,
             Sources = response.Sources

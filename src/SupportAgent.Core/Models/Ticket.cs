@@ -8,6 +8,8 @@ public class Ticket
     /// <summary>Unique ticket identifier.</summary>
     public int Id { get; set; }
 
+    public Guid OrganizationId { get; set; }
+
     /// <summary>Customer who opened the ticket.</summary>
     public int CustomerId { get; set; }
 

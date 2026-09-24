@@ -31,7 +31,7 @@ public class CustomerConfiguration : IEntityTypeConfiguration<Customer>
             .IsRequired()
             .HasMaxLength(256);
 
-        builder.HasIndex(customer => customer.Email)
+        builder.HasIndex(customer => new { customer.OrganizationId, customer.Email })
             .IsUnique();
 
         builder.Property(customer => customer.Phone)

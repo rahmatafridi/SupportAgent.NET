@@ -8,6 +8,8 @@ public class KnowledgeDocument
     /// <summary>Unique document identifier.</summary>
     public int Id { get; set; }
 
+    public Guid OrganizationId { get; set; }
+
     /// <summary>Human-readable document title.</summary>
     public string Title { get; set; } = string.Empty;
 

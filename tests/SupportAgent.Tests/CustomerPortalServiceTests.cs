@@ -9,6 +9,29 @@ namespace SupportAgent.Tests;
 public class CustomerPortalServiceTests
 {
     [Fact]
+    public async Task Agent_reply_is_unread_until_customer_opens_ticket()
+    {
+        var tenant = Guid.NewGuid(); var user = Guid.NewGuid();
+        await using var db = new SupportAgentDbContext(
+            new DbContextOptionsBuilder<SupportAgentDbContext>().UseInMemoryDatabase(Guid.NewGuid().ToString()).Options,
+            new Context(tenant, user));
+        db.Organizations.Add(new Organization { Id = tenant, Name = "Portal Org", Slug = "portal", IsActive = true });
+        db.Customers.Add(new Customer { Id = 1, OrganizationId = tenant, ApplicationUserId = user, FirstName = "Jane", LastName = "Doe", Email = "jane@example.com" });
+        await db.SaveChangesAsync();
+        var portal = new CustomerPortalService(db, new Context(tenant, user));
+        var ticket = (await portal.CreateTicketAsync("Delivery", "Medium", "Where is it?", null))!;
+
+        await new TicketService(db, new Context(tenant, user)).AddAgentMessageAsync(ticket.Id, "Your order has shipped.");
+
+        Assert.True(Assert.Single((await portal.GetTicketsAsync())!.Tickets).HasUnreadAgentReply);
+        Assert.True(await portal.MarkTicketReadAsync(ticket.Id));
+        Assert.False(Assert.Single((await portal.GetTicketsAsync())!.Tickets).HasUnreadAgentReply);
+
+        await new TicketService(db, new Context(tenant, user)).AddAgentMessageAsync(ticket.Id, "Here is another update.");
+        Assert.True(Assert.Single((await portal.GetTicketsAsync())!.Tickets).HasUnreadAgentReply);
+    }
+
+    [Fact]
     public async Task Customer_can_create_and_reply_only_to_own_ticket_and_order()
     {
         var tenant = Guid.NewGuid(); var user = Guid.NewGuid(); var otherUser = Guid.NewGuid();

@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using SupportAgent.Infrastructure.Data;
 
@@ -11,9 +12,11 @@ using SupportAgent.Infrastructure.Data;
 namespace SupportAgent.Infrastructure.Data.Migrations
 {
     [DbContext(typeof(SupportAgentDbContext))]
-    partial class SupportAgentDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260925112021_CustomerPortalUnreadReplies")]
+    partial class CustomerPortalUnreadReplies
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

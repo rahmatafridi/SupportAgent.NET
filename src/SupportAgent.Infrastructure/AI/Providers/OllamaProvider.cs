@@ -94,6 +94,13 @@ public class OllamaProvider : IAIProvider
         AIRequest request,
         CancellationToken cancellationToken = default)
     {
+        if (request.Tools is { Count: > 0 } &&
+            !string.IsNullOrWhiteSpace(request.ResponseFormatJsonSchema))
+        {
+            throw new InvalidOperationException(
+                "Native tools and a structured response format cannot be sent in the same Ollama request.");
+        }
+
         if (request.Tools is { Count: > 0 })
         {
             await EnsureToolCallingSupportedAsync(cancellationToken);
@@ -106,7 +113,15 @@ public class OllamaProvider : IAIProvider
         {
             ["model"] = _options.Model,
             ["messages"] = BuildOllamaMessages(messages),
-            ["stream"] = false
+            ["stream"] = false,
+            // Copilot answers should be reproducible for the same grounded
+            // context. Tool selection and structured formatting otherwise vary
+            // across identical clicks with Ollama's sampling defaults.
+            ["options"] = new
+            {
+                temperature = 0,
+                seed = 42
+            }
         };
 
 
@@ -117,6 +132,12 @@ public class OllamaProvider : IAIProvider
 
             payload["tools"] = request.Tools.Select(BuildOllamaTool).ToList();
 
+        }
+
+        if (!string.IsNullOrWhiteSpace(request.ResponseFormatJsonSchema))
+        {
+            payload["format"] = JsonSerializer.Deserialize<JsonElement>(
+                request.ResponseFormatJsonSchema);
         }
 
 

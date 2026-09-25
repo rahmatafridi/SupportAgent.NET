@@ -18,4 +18,7 @@ public class AIRequest
 
     /// <summary>Optional tools the model is allowed to call during this request.</summary>
     public IReadOnlyList<AIToolDefinition>? Tools { get; set; }
+
+    /// <summary>Optional JSON Schema used to constrain a final structured response.</summary>
+    public string? ResponseFormatJsonSchema { get; set; }
 }

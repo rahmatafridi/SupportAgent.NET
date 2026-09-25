@@ -24,10 +24,19 @@ public record CopilotAskRequest(
 public record CopilotAskResponse(
     Guid ConversationId,
     string Answer,
-    IReadOnlyList<string> SuggestedActions,
+    IReadOnlyList<SuggestedActionResponse> SuggestedActions,
     double Confidence,
     IReadOnlyList<ToolUsageResponse> ToolsUsed,
     IReadOnlyList<KnowledgeSourceResponse> Sources);
+
+public record SuggestedActionResponse(Guid Id, string Label, string? Description, string ActionType, bool RequiresConfirmation, string Status);
+public record ExecuteSuggestedActionRequest(int TicketId, Guid ConversationId, bool Confirmed = false);
+public record ExecuteSuggestedActionResponse(
+    string Action,
+    string ActionLabel,
+    bool Success,
+    JsonElement Result,
+    CopilotAskResponse UpdatedResponse);
 
 /// <summary>
 /// Request body for POST /api/copilot/draft-reply.
@@ -86,13 +95,7 @@ public static class CopilotEndpoints
                     cancellationToken);
                 await usageService.RecordUsageAsync(result.Usage, "CopilotAsk", cancellationToken);
 
-                return Results.Ok(new CopilotAskResponse(
-                    result.ConversationId,
-                    result.Answer,
-                    result.SuggestedActions,
-                    result.Confidence,
-                    MapToolsUsed(result.ToolsUsed),
-                    MapSources(result.Sources)));
+                return Results.Ok(ToAskResponse(result));
             }
             catch (InvalidOperationException exception)
             {
@@ -143,6 +146,28 @@ public static class CopilotEndpoints
         .WithSummary("Generates a suggested customer reply draft for human review.")
         .WithDescription("Does not send customer replies automatically.");
 
+        app.MapPost("/api/copilot/actions/{actionId:guid}/execute", async (
+            Guid actionId,
+            ExecuteSuggestedActionRequest request,
+            ICopilotActionService actionService,
+            IAIUsageService usageService,
+            CancellationToken cancellationToken) =>
+        {
+            try
+            {
+                var result = await actionService.ExecuteAsync(actionId, request.TicketId, request.ConversationId,
+                    request.Confirmed, cancellationToken);
+                await usageService.RecordUsageAsync(result.UpdatedResponse.Usage, "CopilotAction", cancellationToken);
+                using var resultDocument = JsonDocument.Parse(result.ResultJson);
+                return Results.Ok(new ExecuteSuggestedActionResponse(result.Action, result.ActionLabel, result.Success,
+                    resultDocument.RootElement.Clone(), ToAskResponse(result.UpdatedResponse)));
+            }
+            catch (InvalidOperationException exception) { return Results.BadRequest(new { error = exception.Message }); }
+        }).RequireAuthorization(AuthorizationPolicies.AiAccess)
+          .RequireRateLimiting("ai")
+          .AddEndpointFilter<AntiforgeryEndpointFilter>()
+          .WithName("ExecuteCopilotSuggestedAction");
+
         return app;
     }
 
@@ -157,6 +182,14 @@ public static class CopilotEndpoints
         sources
             .Select(source => new KnowledgeSourceResponse(source.Title, source.Source))
             .ToList();
+
+    private static CopilotAskResponse ToAskResponse(CopilotAskResult result) => new(
+        result.ConversationId, result.Answer, MapSuggestedActions(result.SuggestedActions), result.Confidence,
+        MapToolsUsed(result.ToolsUsed), MapSources(result.Sources));
+
+    private static IReadOnlyList<SuggestedActionResponse> MapSuggestedActions(IReadOnlyList<AISuggestedActionView> actions) =>
+        actions.Select(action => new SuggestedActionResponse(action.Id, action.Label, action.Description,
+            action.ActionType.ToString(), action.RequiresConfirmation, action.Status.ToString())).ToList();
 
     private static JsonElement ParseArguments(string argumentsJson)
     {

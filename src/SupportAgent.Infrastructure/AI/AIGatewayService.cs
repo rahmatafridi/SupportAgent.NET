@@ -88,7 +88,11 @@ public class AIGatewayService : IAIGateway
             {
                 SystemPrompt = request.SystemPrompt,
                 Messages = conversation,
-                Tools = request.Tools
+                Tools = request.Tools,
+                // Native tool selection and final response formatting are separate
+                // phases. Some local models treat a response schema as the argument
+                // schema of the next function when both are sent together.
+                ResponseFormatJsonSchema = null
             };
 
             var response = await provider.GenerateAsync(iterationRequest, cancellationToken);
@@ -100,6 +104,41 @@ public class AIGatewayService : IAIGateway
 
             if (!response.HasToolCalls)
             {
+                if (!string.IsNullOrWhiteSpace(request.ResponseFormatJsonSchema))
+                {
+                    conversation.Add(new AIMessage
+                    {
+                        Role = AIMessageRole.Assistant,
+                        Content = response.Text ?? string.Empty
+                    });
+                    conversation.Add(new AIMessage
+                    {
+                        Role = AIMessageRole.User,
+                        Content = "Return the final answer using the required structured response format. Do not call tools."
+                    });
+
+                    var formattedResponse = await provider.GenerateAsync(new AIRequest
+                    {
+                        SystemPrompt = request.SystemPrompt,
+                        Messages = conversation,
+                        Tools = null,
+                        ResponseFormatJsonSchema = request.ResponseFormatJsonSchema
+                    }, cancellationToken);
+
+                    if (formattedResponse.HasToolCalls)
+                    {
+                        throw new InvalidOperationException(
+                            "The provider returned a native tool call during the structured response formatting phase.");
+                    }
+
+                    totalDuration += formattedResponse.Duration;
+                    inputTokens += formattedResponse.InputTokens;
+                    outputTokens += formattedResponse.OutputTokens;
+                    model = formattedResponse.Model;
+                    providerName = formattedResponse.Provider;
+                    response = formattedResponse;
+                }
+
                 return new AIResponse
                 {
                     Text = response.Text,

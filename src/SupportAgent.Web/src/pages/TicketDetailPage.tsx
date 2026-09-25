@@ -12,7 +12,8 @@ export function TicketDetailPage() {
   const { user } = useAuth()
   const canUseAi = user?.roles.some(role => role === 'Admin' || role === 'SupportAgent') === true
   const [refreshKey, setRefreshKey] = useState(0)
-  const [draftText, setDraftText] = useState('')
+  const [agentReply, setAgentReply] = useState('')
+  const [focusReplyKey, setFocusReplyKey] = useState(0)
 
   if (!Number.isFinite(ticketId) || ticketId <= 0) {
     return (
@@ -34,8 +35,8 @@ export function TicketDetailPage() {
       </header>
       <div className="workspace-grid">
         <TicketList refreshKey={refreshKey} />
-        <TicketConversation ticketId={ticketId} canManage={canUseAi} refreshKey={refreshKey} draftText={draftText} onChanged={() => setRefreshKey(value => value + 1)} />
-        {canUseAi && <CopilotPanel ticketId={ticketId} onUseDraft={text => setDraftText(text)} />}
+        <TicketConversation ticketId={ticketId} canManage={canUseAi} refreshKey={refreshKey} reply={agentReply} onReplyChange={setAgentReply} focusReplyKey={focusReplyKey} onChanged={() => setRefreshKey(value => value + 1)} />
+        {canUseAi && <CopilotPanel ticketId={ticketId} onUseDraft={text => { setAgentReply(text); setFocusReplyKey(value => value + 1) }} />}
       </div>
     </main></>
   )

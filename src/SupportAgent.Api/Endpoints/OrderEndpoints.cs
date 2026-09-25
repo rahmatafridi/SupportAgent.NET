@@ -1,4 +1,5 @@
 using SupportAgent.Core.Interfaces;
+using SupportAgent.Api.Authorization;
 
 namespace SupportAgent.Api.Endpoints;
 
@@ -28,7 +29,7 @@ public static class OrderEndpoints
                 : Results.Ok(order);
         })
         .WithName("GetOrder")
-        .RequireAuthorization()
+        .RequireAuthorization(AuthorizationPolicies.InternalSupport)
         .WithSummary("Gets an order by ID.")
         .WithDescription("Returns order details from SQL Server via IOrderService.GetOrderAsync.");
 
@@ -43,7 +44,7 @@ public static class OrderEndpoints
             return Results.Ok(orders);
         })
         .WithName("GetOrdersByCustomer")
-        .RequireAuthorization()
+        .RequireAuthorization(AuthorizationPolicies.InternalSupport)
         .WithSummary("Gets all orders for a customer.")
         .WithDescription("Returns a list of orders for the given customer ID via IOrderService.GetOrdersByCustomerAsync.");
 

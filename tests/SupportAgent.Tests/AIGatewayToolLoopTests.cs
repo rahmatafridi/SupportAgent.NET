@@ -5,6 +5,7 @@ using SupportAgent.Core.Models;
 using SupportAgent.Core.Models.AI;
 using SupportAgent.Infrastructure.AI;
 using SupportAgent.Infrastructure.AI.Tools;
+using SupportAgent.Infrastructure.Copilot;
 
 namespace SupportAgent.Tests;
 
@@ -80,6 +81,51 @@ public class AIGatewayToolLoopTests
         Assert.Equal(1, toolExecutor.ExecutionCount);
         Assert.Equal(2, provider.CallCount);
         Assert.Equal(SupportToolDefinitions.GetCustomerToolName, toolExecutor.LastToolCall?.Name);
+    }
+
+    [Fact]
+    public async Task GenerateAsync_AppliesStructuredFormatOnlyAfterToolExecution()
+    {
+        var provider = new ScriptableAIProvider(callNumber => callNumber == 1
+            ? new AIResponse
+            {
+                Provider = "Fake",
+                Model = "fake-model",
+                ToolCalls =
+                [
+                    new AIToolCall
+                    {
+                        Id = "call-order",
+                        Name = SupportToolDefinitions.GetOrderStatusToolName,
+                        ArgumentsJson = "{\"orderId\":2}"
+                    }
+                ]
+            }
+            : new AIResponse
+            {
+                Text = "{\"answer\":\"Order is shipped.\",\"suggestedActions\":[],\"confidence\":0.9}",
+                Provider = "Fake",
+                Model = "fake-model"
+            });
+
+        var schema = SupportAgentCopilotPrompts.SupportResponseJsonSchema;
+        await CreateGateway(provider, new RecordingToolExecutor()).GenerateAsync(new AIRequest
+        {
+            Prompt = "What is happening?",
+            Tools = SupportToolDefinitions.GetAll(),
+            ResponseFormatJsonSchema = schema
+        });
+
+        Assert.Equal(3, provider.CallCount);
+        Assert.All(provider.Requests.Take(2), nativeRequest =>
+        {
+            Assert.NotEmpty(nativeRequest.Tools!);
+            Assert.Null(nativeRequest.ResponseFormatJsonSchema);
+        });
+        Assert.Null(provider.Requests[2].Tools);
+        Assert.Equal(schema, provider.Requests[2].ResponseFormatJsonSchema);
+        Assert.DoesNotContain(provider.Requests, item =>
+            item.Tools is { Count: > 0 } && !string.IsNullOrWhiteSpace(item.ResponseFormatJsonSchema));
     }
 
     [Fact]
@@ -313,6 +359,8 @@ public class AIGatewayToolLoopTests
     {
         public int CallCount { get; private set; }
 
+        public List<AIRequest> Requests { get; } = [];
+
         public string ProviderName => "Fake";
 
         public Task<AIResponse> GenerateAsync(
@@ -320,6 +368,7 @@ public class AIGatewayToolLoopTests
             CancellationToken cancellationToken = default)
         {
             CallCount++;
+            Requests.Add(request);
             cancellationToken.ThrowIfCancellationRequested();
             return Task.FromResult(responseFactory(CallCount));
         }

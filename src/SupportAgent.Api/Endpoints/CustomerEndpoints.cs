@@ -1,4 +1,5 @@
 using SupportAgent.Core.Interfaces;
+using SupportAgent.Api.Authorization;
 
 namespace SupportAgent.Api.Endpoints;
 
@@ -17,7 +18,7 @@ public static class CustomerEndpoints
         app.MapGet("/api/customers", async (ICustomerService customerService, CancellationToken cancellationToken) =>
             Results.Ok(await customerService.GetCustomersAsync(cancellationToken)))
             .WithName("GetCustomers")
-            .RequireAuthorization()
+            .RequireAuthorization(AuthorizationPolicies.InternalSupport)
             .WithSummary("Lists customers in the current organization.");
 
         // GET /api/customers/{id}
@@ -34,7 +35,7 @@ public static class CustomerEndpoints
                 : Results.Ok(customer);
         })
         .WithName("GetCustomer")
-        .RequireAuthorization()
+        .RequireAuthorization(AuthorizationPolicies.InternalSupport)
         .WithSummary("Gets a customer by ID.")
         .WithDescription("Returns customer details from SQL Server via ICustomerService.GetCustomerAsync.");
 

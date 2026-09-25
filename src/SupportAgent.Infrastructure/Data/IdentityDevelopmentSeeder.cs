@@ -31,15 +31,18 @@ public static class IdentityDevelopmentSeeder
             await db.SaveChangesAsync(cancellationToken);
         }
 
-        foreach (var role in new[] { ApplicationRoles.Admin, ApplicationRoles.SupportAgent, ApplicationRoles.Viewer })
+        foreach (var role in new[] { ApplicationRoles.Admin, ApplicationRoles.SupportAgent, ApplicationRoles.Viewer, ApplicationRoles.Customer })
             if (!await roleManager.RoleExistsAsync(role))
                 await roleManager.CreateAsync(new IdentityRole<Guid>(role));
 
         await EnsureUserAsync("admin@supportagent.local", "Demo Admin", ApplicationRoles.Admin);
         await EnsureUserAsync("agent@supportagent.local", "Demo Agent", ApplicationRoles.SupportAgent);
         await EnsureUserAsync("viewer@supportagent.local", "Demo Viewer", ApplicationRoles.Viewer);
+        var customerUser = await EnsureUserAsync("john@example.com", "John Smith", ApplicationRoles.Customer);
+        var customer = await db.Customers.IgnoreQueryFilters().FirstOrDefaultAsync(x => x.OrganizationId == organization.Id && x.Email == "john@example.com", cancellationToken);
+        if (customer is not null && customer.ApplicationUserId != customerUser.Id) { customer.ApplicationUserId = customerUser.Id; await db.SaveChangesAsync(cancellationToken); }
 
-        async Task EnsureUserAsync(string email, string displayName, string role)
+        async Task<ApplicationUser> EnsureUserAsync(string email, string displayName, string role)
         {
             var user = await userManager.FindByEmailAsync(email);
             if (user is null)
@@ -54,6 +57,7 @@ public static class IdentityDevelopmentSeeder
                     throw new InvalidOperationException(string.Join("; ", created.Errors.Select(x => x.Description)));
             }
             if (!await userManager.IsInRoleAsync(user, role)) await userManager.AddToRoleAsync(user, role);
+            return user;
         }
     }
 }

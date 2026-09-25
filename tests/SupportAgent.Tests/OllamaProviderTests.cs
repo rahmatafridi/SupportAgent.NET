@@ -11,11 +11,34 @@ using SupportAgent.Core.Models.AI;
 using SupportAgent.Infrastructure.AI;
 using SupportAgent.Infrastructure.AI.Providers;
 using SupportAgent.Infrastructure.AI.Tools;
+using SupportAgent.Infrastructure.Copilot;
 
 namespace SupportAgent.Tests;
 
 public class OllamaProviderTests
 {
+    [Fact]
+    public async Task GenerateAsync_UsesDeterministicSamplingForCopilotRequests()
+    {
+        string? requestBody = null;
+        var handler = new StubHttpMessageHandler(request =>
+        {
+            requestBody = request.Content!.ReadAsStringAsync().GetAwaiter().GetResult();
+            return JsonResponse(new
+            {
+                model = "llama3.1",
+                message = new { role = "assistant", content = "Stable answer" }
+            });
+        });
+
+        await CreateProvider(handler).GenerateAsync(new AIRequest { Prompt = "Same question" });
+
+        using var document = JsonDocument.Parse(requestBody!);
+        var options = document.RootElement.GetProperty("options");
+        Assert.Equal(0, options.GetProperty("temperature").GetInt32());
+        Assert.Equal(42, options.GetProperty("seed").GetInt32());
+    }
+
     [Fact]
     public async Task GenerateAsync_ParsesNativeToolCalls_FromMessageToolCallsField()
     {
@@ -178,6 +201,57 @@ public class OllamaProviderTests
 
         Assert.Equal(JsonValueKind.Object, arguments.ValueKind);
         Assert.Equal(101, arguments.GetProperty("customerId").GetInt32());
+    }
+
+    [Fact]
+    public async Task GenerateAsync_SendsJsonSchemaFormatForConstrainedFinalResponse()
+    {
+        string? chatRequestBody = null;
+        var handler = new StubHttpMessageHandler(request =>
+        {
+            if (request.RequestUri?.AbsolutePath == "/api/show")
+            {
+                return JsonResponse(new { capabilities = new[] { "tools" } });
+            }
+
+            chatRequestBody = request.Content!.ReadAsStringAsync().GetAwaiter().GetResult();
+            return JsonResponse(new
+            {
+                model = "llama3.1",
+                message = new
+                {
+                    role = "assistant",
+                    content = "{\"answer\":\"Order is shipped.\",\"suggestedActions\":[],\"confidence\":0.9}"
+                }
+            });
+        });
+
+        await CreateProvider(handler).GenerateAsync(new AIRequest
+        {
+            Messages = [new AIMessage { Role = AIMessageRole.Tool, ToolName = "GetOrderStatus", Content = "{}" }],
+            ResponseFormatJsonSchema = SupportAgentCopilotPrompts.SupportResponseJsonSchema
+        });
+
+        using var document = JsonDocument.Parse(chatRequestBody!);
+        var format = document.RootElement.GetProperty("format");
+        Assert.Equal("object", format.GetProperty("type").GetString());
+        Assert.True(format.GetProperty("properties").TryGetProperty("answer", out _));
+    }
+
+    [Fact]
+    public async Task GenerateAsync_RejectsCombiningNativeToolsAndStructuredFormat()
+    {
+        var handler = new StubHttpMessageHandler(_ => throw new InvalidOperationException("HTTP must not be called."));
+
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            CreateProvider(handler).GenerateAsync(new AIRequest
+            {
+                Prompt = "Test",
+                Tools = SupportToolDefinitions.GetAll(),
+                ResponseFormatJsonSchema = SupportAgentCopilotPrompts.SupportResponseJsonSchema
+            }));
+
+        Assert.Contains("cannot be sent in the same", exception.Message, StringComparison.Ordinal);
     }
 
     [Fact]

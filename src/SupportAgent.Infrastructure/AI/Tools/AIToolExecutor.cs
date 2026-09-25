@@ -1,4 +1,6 @@
 using System.Text.Json;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using SupportAgent.Core.Interfaces;
 using SupportAgent.Core.Models.AI;
 
@@ -19,6 +21,8 @@ public class AIToolExecutor : IAIToolExecutor
     private readonly ICustomerService _customerService;
     private readonly IOrderService _orderService;
     private readonly IKnowledgeService _knowledgeService;
+    private readonly ILogger<AIToolExecutor>? _logger;
+    private readonly IHostEnvironment? _hostEnvironment;
 
     /// <summary>
     /// Creates a new tool executor instance.
@@ -26,14 +30,20 @@ public class AIToolExecutor : IAIToolExecutor
     /// <param name="customerService">Business service used by the GetCustomer tool.</param>
     /// <param name="orderService">Business service used by the GetOrderStatus tool.</param>
     /// <param name="knowledgeService">Business service used by the SearchKnowledgeBase tool.</param>
+    /// <param name="logger">Logger used for rejected native tool-call diagnostics.</param>
+    /// <param name="hostEnvironment">Host environment controlling development-only diagnostics.</param>
     public AIToolExecutor(
         ICustomerService customerService,
         IOrderService orderService,
-        IKnowledgeService knowledgeService)
+        IKnowledgeService knowledgeService,
+        ILogger<AIToolExecutor>? logger = null,
+        IHostEnvironment? hostEnvironment = null)
     {
         _customerService = customerService;
         _orderService = orderService;
         _knowledgeService = knowledgeService;
+        _logger = logger;
+        _hostEnvironment = hostEnvironment;
     }
 
     /// <inheritdoc />
@@ -53,7 +63,7 @@ public class AIToolExecutor : IAIToolExecutor
                 $"Tool '{toolCall.Name}' is not registered.");
         }
 
-        return toolCall.Name switch
+        var result = toolCall.Name switch
         {
             SupportToolDefinitions.GetCustomerToolName =>
                 await ExecuteGetCustomerAsync(toolCall, cancellationToken),
@@ -63,6 +73,17 @@ public class AIToolExecutor : IAIToolExecutor
                 await ExecuteSearchKnowledgeBaseAsync(toolCall, cancellationToken),
             _ => CreateErrorResult(toolCall, $"Tool '{toolCall.Name}' is not registered.")
         };
+
+        if (!result.Success && _hostEnvironment?.IsDevelopment() == true)
+        {
+            _logger?.LogWarning(
+                "Rejected native tool call {ToolName}. Arguments: {Arguments}. Error: {Error}",
+                toolCall.Name,
+                toolCall.ArgumentsJson,
+                result.Error);
+        }
+
+        return result;
     }
 
     /// <summary>
@@ -194,7 +215,9 @@ public class AIToolExecutor : IAIToolExecutor
         try
         {
             using var document = JsonDocument.Parse(string.IsNullOrWhiteSpace(argumentsJson) ? "{}" : argumentsJson);
-            if (!document.RootElement.TryGetProperty(propertyName, out var property))
+            if (document.RootElement.ValueKind != JsonValueKind.Object ||
+                document.RootElement.EnumerateObject().Count() != 1 ||
+                !document.RootElement.TryGetProperty(propertyName, out var property))
             {
                 return false;
             }
@@ -204,11 +227,6 @@ public class AIToolExecutor : IAIToolExecutor
                 return true;
             }
 
-            if (property.ValueKind == JsonValueKind.String &&
-                int.TryParse(property.GetString(), out value))
-            {
-                return true;
-            }
         }
         catch (JsonException)
         {
@@ -228,7 +246,9 @@ public class AIToolExecutor : IAIToolExecutor
         try
         {
             using var document = JsonDocument.Parse(string.IsNullOrWhiteSpace(argumentsJson) ? "{}" : argumentsJson);
-            if (!document.RootElement.TryGetProperty(propertyName, out var property) ||
+            if (document.RootElement.ValueKind != JsonValueKind.Object ||
+                document.RootElement.EnumerateObject().Count() != 1 ||
+                !document.RootElement.TryGetProperty(propertyName, out var property) ||
                 property.ValueKind != JsonValueKind.String)
             {
                 return false;

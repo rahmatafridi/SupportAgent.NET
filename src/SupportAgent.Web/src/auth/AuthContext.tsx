@@ -5,7 +5,7 @@ import type { CurrentUser } from '../services/authService'
 type AuthValue = {
   user: CurrentUser | null
   loading: boolean
-  login(email: string, password: string): Promise<void>
+  login(email: string, password: string): Promise<CurrentUser>
   register(organization: string, email: string, password: string): Promise<void>
   logout(): Promise<void>
 }
@@ -19,7 +19,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => { refresh().finally(() => setLoading(false)) }, [])
   return <AuthContext.Provider value={{
     user, loading,
-    login: async (email, password) => { await authService.login(email, password); await refresh() },
+    login: async (email, password) => { await authService.login(email, password); const current = await authService.getCurrentUser(); if (!current) throw new Error('Could not load the signed-in user.'); setUser(current); return current },
     register: async (organization, email, password) => { await authService.register(organization, email, password); await authService.login(email, password); await refresh() },
     logout: async () => { await authService.logout(); setUser(null) },
   }}>{children}</AuthContext.Provider>

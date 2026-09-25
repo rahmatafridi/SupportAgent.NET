@@ -33,8 +33,8 @@ public static class SupportToolDefinitions
     /// <returns>The list of tool definitions sent to the model.</returns>
     public static IReadOnlyList<AIToolDefinition> GetAll() =>
     [
-        GetCustomer,
         GetOrderStatus,
+        GetCustomer,
         SearchKnowledgeBase
     ];
 
@@ -44,7 +44,7 @@ public static class SupportToolDefinitions
     public static AIToolDefinition GetCustomer { get; } = new()
     {
         Name = GetCustomerToolName,
-        Description = "Gets a customer using the customer ID.",
+        Description = "Retrieves customer identity or contact details only. Do not use it for a general ticket summary or order investigation merely because the question says customer; it cannot provide order status.",
         ParametersJsonSchema = """
             {
               "type": "object",
@@ -66,14 +66,14 @@ public static class SupportToolDefinitions
     public static AIToolDefinition GetOrderStatus { get; } = new()
     {
         Name = GetOrderStatusToolName,
-        Description = "Gets the current order information and status using the order ID.",
+        Description = "Gets authoritative current order information and status using the order ID. When ticket context provides a numeric RelatedOrderId and the linked order is relevant to the support question, use that exact ID before answering.",
         ParametersJsonSchema = """
             {
               "type": "object",
               "properties": {
                 "orderId": {
                   "type": "integer",
-                  "description": "The order ID"
+                  "description": "The exact related order ID, such as RelatedOrderId from ticket context"
                 }
               },
               "required": ["orderId"],
@@ -89,8 +89,8 @@ public static class SupportToolDefinitions
     {
         Name = SearchKnowledgeBaseToolName,
         Description = """
-            Searches the company's internal knowledge base for policies, procedures, product information,
-            troubleshooting instructions, and other internal support knowledge.
+            Retrieves company policy, procedure, product information, or troubleshooting guidance only.
+            It does not retrieve current customer or order facts and is not the first step for a linked entity status.
             """,
         ParametersJsonSchema = """
             {

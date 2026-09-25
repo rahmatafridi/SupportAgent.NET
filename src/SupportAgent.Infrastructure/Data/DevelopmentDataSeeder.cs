@@ -84,6 +84,7 @@ public static class DevelopmentDataSeeder
             {
                 Id = 1001,
                 CustomerId = 101,
+                OrderId = 1,
                 Subject = "Where is my order?",
                 Status = "Open",
                 Priority = "High",
@@ -93,6 +94,7 @@ public static class DevelopmentDataSeeder
             {
                 Id = 1002,
                 CustomerId = 102,
+                OrderId = 3,
                 Subject = "Need help with delivery",
                 Status = "Open",
                 Priority = "Medium",

@@ -42,7 +42,7 @@ public class CopilotAskResult
 
     /// <summary>Grounded knowledge sources cited in the answer.</summary>
     public IReadOnlyList<KnowledgeSource> Sources { get; set; } = [];
-    public IReadOnlyList<string> SuggestedActions { get; set; } = [];
+    public IReadOnlyList<AISuggestedActionView> SuggestedActions { get; set; } = [];
     public double Confidence { get; set; }
 }
 

@@ -14,12 +14,13 @@ public static class TicketContextBuilder
     public static string Build(Ticket ticket, IReadOnlyList<TicketMessage> messages, int maxMessages)
     {
         var builder = new StringBuilder();
-        builder.AppendLine("Ticket context:");
-        builder.AppendLine($"- Ticket ID: {ticket.Id}");
+        builder.AppendLine("Current ticket context (use this as the primary description of the support issue):");
+        builder.AppendLine($"- TicketId: {ticket.Id}");
         builder.AppendLine($"- Subject: {ticket.Subject}");
+        builder.AppendLine($"- CustomerId: {ticket.CustomerId}");
+        builder.AppendLine($"- RelatedOrderId: {(ticket.OrderId.HasValue ? ticket.OrderId.Value : "None")}");
         builder.AppendLine($"- Status: {ticket.Status}");
         builder.AppendLine($"- Priority: {ticket.Priority}");
-        builder.AppendLine($"- Customer ID: {ticket.CustomerId}");
         builder.AppendLine("Recent ticket messages:");
 
         var recentMessages = messages

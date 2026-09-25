@@ -104,6 +104,26 @@ public class TicketServiceTests
     }
 
     [Fact]
+    public async Task Related_order_must_belong_to_ticket_customer()
+    {
+        var tenant = Guid.NewGuid();
+        await using var context = CreateContext(nameof(Related_order_must_belong_to_ticket_customer), tenant, Guid.NewGuid());
+        context.Customers.AddRange(
+            new Customer { Id = 1, OrganizationId = tenant, FirstName = "Ticket", LastName = "Customer", Email = "one@example.com" },
+            new Customer { Id = 2, OrganizationId = tenant, FirstName = "Other", LastName = "Customer", Email = "two@example.com" });
+        context.Orders.AddRange(
+            new Order { Id = 1, OrganizationId = tenant, CustomerId = 1, OrderNumber = "ORD-1", Status = "Processing" },
+            new Order { Id = 2, OrganizationId = tenant, CustomerId = 2, OrderNumber = "ORD-2", Status = "Shipped" });
+        context.Tickets.Add(new Ticket { Id = 1, OrganizationId = tenant, CustomerId = 1, Subject = "Missing", Status = "Open", Priority = "Medium", CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow });
+        await context.SaveChangesAsync();
+        var service = new TicketService(context, new UserContext(tenant, Guid.NewGuid()));
+
+        Assert.Equal(1, (await service.UpdateOrderAsync(1, 1))!.OrderId);
+        await Assert.ThrowsAsync<ArgumentException>(() => service.UpdateOrderAsync(1, 2));
+        Assert.Equal(1, (await service.GetTicketAsync(1))!.OrderId);
+    }
+
+    [Fact]
     public async Task Notes_context_summary_and_updated_time_are_tenant_scoped()
     {
         var tenant = Guid.NewGuid(); var user = Guid.NewGuid();

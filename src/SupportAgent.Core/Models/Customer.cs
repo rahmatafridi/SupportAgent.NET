@@ -25,6 +25,9 @@ public class Customer
     /// <summary>Date and time when the customer record was created.</summary>
     public DateTime CreatedAt { get; set; }
 
+    /// <summary>Identity account linked to this customer profile.</summary>
+    public Guid? ApplicationUserId { get; set; }
+
     /// <summary>Orders belonging to this customer.</summary>
     public ICollection<Order> Orders { get; set; } = new List<Order>();
 

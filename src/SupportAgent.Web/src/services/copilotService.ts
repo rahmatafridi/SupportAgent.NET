@@ -3,6 +3,7 @@ import type {
   CopilotAskResponse,
   CopilotDraftRequest,
   CopilotDraftResponse,
+  CopilotActionExecutionResponse,
 } from '../types/copilot'
 import { apiFetch } from './api'
 
@@ -53,4 +54,13 @@ export async function draftCopilotReply(
   }
 
   return response.json() as Promise<CopilotDraftResponse>
+}
+
+export async function executeCopilotAction(actionId: string, ticketId: number, conversationId: string, confirmed: boolean): Promise<CopilotActionExecutionResponse> {
+  const response = await apiFetch(`/api/copilot/actions/${actionId}/execute`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ticketId, conversationId, confirmed }),
+  })
+  if (!response.ok) throw new Error(readApiErrorMessage(await response.text(), response.status))
+  return response.json() as Promise<CopilotActionExecutionResponse>
 }

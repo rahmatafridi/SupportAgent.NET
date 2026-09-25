@@ -46,6 +46,23 @@ public class TicketService : ITicketService
     public Task<Ticket?> UpdatePriorityAsync(int ticketId, string priority, CancellationToken cancellationToken = default) =>
         UpdateTicketAsync(ticketId, Normalize(priority, Priorities, nameof(priority)), false, cancellationToken);
 
+    public async Task<Ticket?> UpdateOrderAsync(int ticketId, int? orderId, CancellationToken cancellationToken = default)
+    {
+        var ticket = await _dbContext.Tickets.FirstOrDefaultAsync(item => item.Id == ticketId, cancellationToken);
+        if (ticket is null) return null;
+        if (orderId.HasValue && !await _dbContext.Orders.AnyAsync(
+                order => order.Id == orderId.Value && order.CustomerId == ticket.CustomerId,
+                cancellationToken))
+        {
+            throw new ArgumentException("Related order must belong to the ticket customer.", nameof(orderId));
+        }
+
+        ticket.OrderId = orderId;
+        ticket.UpdatedAt = DateTime.UtcNow;
+        await _dbContext.SaveChangesAsync(cancellationToken);
+        return ticket;
+    }
+
     public Task<TicketMessage?> AddAgentMessageAsync(int ticketId, string message, CancellationToken cancellationToken = default) =>
         AddMessageAsync(ticketId, message, "Agent", cancellationToken);
 

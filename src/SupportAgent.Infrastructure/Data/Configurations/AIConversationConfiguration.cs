@@ -28,5 +28,11 @@ public class AIConversationConfiguration : IEntityTypeConfiguration<AIConversati
             .WithOne(audit => audit.Conversation)
             .HasForeignKey(audit => audit.AIConversationId)
             .OnDelete(DeleteBehavior.Cascade);
+
+        builder.HasMany(conversation => conversation.SuggestedActions)
+            .WithOne(action => action.Conversation)
+            .HasForeignKey(action => action.AIConversationId)
+            .OnDelete(DeleteBehavior.Cascade);
+
     }
 }

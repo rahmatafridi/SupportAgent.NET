@@ -10,6 +10,7 @@ public interface ITicketService
     Task<Ticket?> CreateTicketAsync(int customerId, string subject, string priority, string message, CancellationToken cancellationToken = default);
     Task<Ticket?> UpdateStatusAsync(int ticketId, string status, CancellationToken cancellationToken = default);
     Task<Ticket?> UpdatePriorityAsync(int ticketId, string priority, CancellationToken cancellationToken = default);
+    Task<Ticket?> UpdateOrderAsync(int ticketId, int? orderId, CancellationToken cancellationToken = default);
     Task<TicketMessage?> AddAgentMessageAsync(int ticketId, string message, CancellationToken cancellationToken = default);
     Task<TicketMessage?> AddCustomerMessageAsync(int ticketId, string message, CancellationToken cancellationToken = default);
 

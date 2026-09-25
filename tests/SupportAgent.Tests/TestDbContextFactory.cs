@@ -54,6 +54,7 @@ public static class TestDbContextFactory
         {
             Id = 1001,
             CustomerId = 101,
+            OrderId = 2,
             Subject = "Where is my order?",
             Status = "Open",
             Priority = "High",

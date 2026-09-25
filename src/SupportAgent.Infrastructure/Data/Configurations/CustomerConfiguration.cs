@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using SupportAgent.Core.Models;
+using SupportAgent.Infrastructure.Identity;
 
 namespace SupportAgent.Infrastructure.Data.Configurations;
 
@@ -33,6 +34,9 @@ public class CustomerConfiguration : IEntityTypeConfiguration<Customer>
 
         builder.HasIndex(customer => new { customer.OrganizationId, customer.Email })
             .IsUnique();
+        builder.HasIndex(customer => customer.ApplicationUserId).IsUnique().HasFilter("[ApplicationUserId] IS NOT NULL");
+        builder.HasOne<ApplicationUser>().WithOne().HasForeignKey<Customer>(customer => customer.ApplicationUserId)
+            .OnDelete(DeleteBehavior.Restrict);
 
         builder.Property(customer => customer.Phone)
             .HasMaxLength(30);

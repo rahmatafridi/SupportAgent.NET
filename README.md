@@ -811,3 +811,16 @@ Admin and SupportAgent users can assign tickets to an active Admin or SupportAge
 Each ticket shows compact customer context, the three most recent orders, the three most recent related tickets, created and updated timestamps, and tenant-scoped summary counts for open, in-progress, high-priority, unassigned, and closed-today tickets.
 
 The AI panel can return an answer, confidence score, sources, and optional suggested actions. Suggested actions are advisory only. **Use Draft** copies an AI-generated draft into the normal agent reply editor for review and editing; it does not send the message. AI never sends replies, changes ticket status or priority, or assigns tickets automatically.
+
+## Customer Portal
+
+Customer accounts use the existing Identity login and are linked server-side to one tenant-scoped customer profile. After login they enter `/portal`, where they can view their own requests, create a request, optionally select one of their own orders, and continue the conversation at `/portal/tickets/:id`.
+
+```text
+Customer -> Login -> My Tickets -> Create Ticket -> Send Message
+         -> Human Support Agent responds -> Customer replies
+```
+
+Portal APIs are `GET /api/portal/me`, `GET|POST /api/portal/tickets`, `GET /api/portal/tickets/{id}`, `GET|POST /api/portal/tickets/{id}/messages`, and `GET /api/portal/orders`. Customer and organization IDs are never accepted from the browser; both are resolved from the authenticated account. Cross-customer ticket and order access returns `404`.
+
+Customer conversation is **Customer ↔ Human Support Agent**. The internal assistant is **Human Support Agent ↔ AI**. Customers cannot access internal notes, AI conversations, tools, sources, knowledge management, assignment, status controls, or administration. AI never sends messages automatically.

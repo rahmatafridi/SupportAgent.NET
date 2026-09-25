@@ -72,6 +72,8 @@ builder.Services.AddAuthorizationBuilder()
     .AddPolicy(AuthorizationPolicies.AiAccess, policy => policy.RequireRole(ApplicationRoles.Admin, ApplicationRoles.SupportAgent))
     .AddPolicy(AuthorizationPolicies.KnowledgeSearch, policy => policy.RequireRole(ApplicationRoles.Admin, ApplicationRoles.SupportAgent))
     .AddPolicy(AuthorizationPolicies.TicketManagement, policy => policy.RequireRole(ApplicationRoles.Admin, ApplicationRoles.SupportAgent))
+    .AddPolicy(AuthorizationPolicies.CustomerPortal, policy => policy.RequireRole(ApplicationRoles.Customer))
+    .AddPolicy(AuthorizationPolicies.InternalSupport, policy => policy.RequireRole(ApplicationRoles.Admin, ApplicationRoles.SupportAgent, ApplicationRoles.Viewer))
     .AddPolicy(AuthorizationPolicies.AdminOnly, policy => policy.RequireRole(ApplicationRoles.Admin));
 builder.Services.AddAntiforgery(options => options.HeaderName = "X-CSRF-TOKEN");
 var maxUploadBytes = builder.Configuration.GetValue("KnowledgeUpload:MaxFileSizeMb", 10) * 1024L * 1024L;
@@ -129,6 +131,7 @@ app.MapKnowledgeEndpoints();
 app.MapAIEndpoints();
 app.MapCopilotEndpoints();
 app.MapAdminEndpoints();
+app.MapPortalEndpoints();
 
 app.Run();
 

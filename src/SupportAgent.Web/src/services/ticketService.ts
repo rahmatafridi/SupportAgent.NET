@@ -68,6 +68,10 @@ export async function updateTicketPriority(ticketId: number, priority: string): 
   return readJson<Ticket>(await apiFetch(`/api/tickets/${ticketId}/priority`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ priority }) }))
 }
 
+export async function updateTicketOrder(ticketId: number, orderId: number | null): Promise<Ticket> {
+  return readJson<Ticket>(await apiFetch(`/api/tickets/${ticketId}/order`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ orderId }) }))
+}
+
 export async function addAgentMessage(ticketId: number, message: string): Promise<TicketMessage> {
   return readJson<TicketMessage>(await apiFetch(`/api/tickets/${ticketId}/messages`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message }) }))
 }

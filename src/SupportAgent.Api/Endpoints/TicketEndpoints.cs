@@ -7,10 +7,11 @@ namespace SupportAgent.Api.Endpoints;
 public record CreateTicketRequest(int CustomerId, string Subject, string Priority, string Message);
 public record UpdateTicketStatusRequest(string Status);
 public record UpdateTicketPriorityRequest(string Priority);
+public record UpdateTicketOrderRequest(int? OrderId);
 public record AddTicketMessageRequest(string Message);
 public record UpdateTicketAssigneeRequest(Guid? AssignedToUserId);
 public record AddInternalNoteRequest(string Content);
-public record TicketResponse(int Id, int CustomerId, string Subject, string Status, string Priority, DateTime CreatedAt, DateTime UpdatedAt, Guid? AssignedToUserId);
+public record TicketResponse(int Id, int CustomerId, int? OrderId, string Subject, string Status, string Priority, DateTime CreatedAt, DateTime UpdatedAt, Guid? AssignedToUserId);
 public record TicketMessageResponse(int Id, int TicketId, string SenderType, string Message, DateTime CreatedAt);
 
 /// <summary>
@@ -50,6 +51,13 @@ public static class TicketEndpoints
         }).RequireAuthorization(AuthorizationPolicies.TicketManagement).AddEndpointFilter<AntiforgeryEndpointFilter>()
           .WithName("UpdateTicketPriority");
 
+        app.MapPatch("/api/tickets/{id:int}/order", async (int id, UpdateTicketOrderRequest request, ITicketService service, CancellationToken cancellationToken) =>
+        {
+            try { var ticket = await service.UpdateOrderAsync(id, request.OrderId, cancellationToken); return ticket is null ? Results.NotFound() : Results.Ok(ToResponse(ticket)); }
+            catch (ArgumentException exception) { return Results.BadRequest(new { error = exception.Message }); }
+        }).RequireAuthorization(AuthorizationPolicies.TicketManagement).AddEndpointFilter<AntiforgeryEndpointFilter>()
+          .WithName("UpdateTicketOrder");
+
         app.MapPost("/api/tickets/{id:int}/messages", async (int id, AddTicketMessageRequest request, ITicketService service, CancellationToken cancellationToken) =>
         {
             try { var message = await service.AddAgentMessageAsync(id, request.Message, cancellationToken); return message is null ? Results.NotFound() : Results.Created($"/api/tickets/{id}/messages/{message.Id}", new TicketMessageResponse(message.Id, message.TicketId, message.SenderType, message.Message, message.CreatedAt)); }
@@ -76,17 +84,17 @@ public static class TicketEndpoints
             catch (ArgumentException exception) { return Results.BadRequest(new { error = exception.Message }); }
         })
         .WithName("GetTickets")
-        .RequireAuthorization()
+        .RequireAuthorization(AuthorizationPolicies.InternalSupport)
         .WithSummary("Lists support tickets.")
         .WithDescription("Returns ticket summaries with customer information for the support workspace.");
 
         app.MapGet("/api/tickets/summary", async (ITicketService service, CancellationToken token) =>
             Results.Ok(await service.GetSummaryAsync(token)))
-            .RequireAuthorization().WithName("GetTicketSummary");
+            .RequireAuthorization(AuthorizationPolicies.InternalSupport).WithName("GetTicketSummary");
 
         app.MapGet("/api/tickets/assignees", async (ITicketService service, CancellationToken token) =>
             Results.Ok(await service.GetAssigneesAsync(token)))
-            .RequireAuthorization().WithName("GetTicketAssignees");
+            .RequireAuthorization(AuthorizationPolicies.InternalSupport).WithName("GetTicketAssignees");
 
         app.MapPatch("/api/tickets/{id:int}/assignee", async (int id, UpdateTicketAssigneeRequest request, ITicketService service, CancellationToken token) =>
         {
@@ -116,7 +124,7 @@ public static class TicketEndpoints
         {
             var context = await service.GetCustomerContextAsync(id, token);
             return context is null ? Results.NotFound() : Results.Ok(context);
-        }).RequireAuthorization().WithName("GetTicketCustomerContext");
+        }).RequireAuthorization(AuthorizationPolicies.InternalSupport).WithName("GetTicketCustomerContext");
 
         // GET /api/tickets/{id}
         // Looks up one support ticket by numeric ID.
@@ -132,7 +140,7 @@ public static class TicketEndpoints
                 : Results.Ok(ticket);
         })
         .WithName("GetTicket")
-        .RequireAuthorization()
+        .RequireAuthorization(AuthorizationPolicies.InternalSupport)
         .WithSummary("Gets a support ticket by ID.")
         .WithDescription("Returns ticket details from SQL Server via ITicketService.GetTicketAsync.");
 
@@ -154,7 +162,7 @@ public static class TicketEndpoints
             return Results.Ok(messages);
         })
         .WithName("GetTicketMessages")
-        .RequireAuthorization()
+        .RequireAuthorization(AuthorizationPolicies.InternalSupport)
         .WithSummary("Gets messages for a support ticket.")
         .WithDescription("Returns ticket messages from SQL Server via ITicketService.GetTicketMessagesAsync.");
 
@@ -162,6 +170,6 @@ public static class TicketEndpoints
     }
 
     private static TicketResponse ToResponse(SupportAgent.Core.Models.Ticket ticket) =>
-        new(ticket.Id, ticket.CustomerId, ticket.Subject, ticket.Status, ticket.Priority, ticket.CreatedAt,
+        new(ticket.Id, ticket.CustomerId, ticket.OrderId, ticket.Subject, ticket.Status, ticket.Priority, ticket.CreatedAt,
             ticket.UpdatedAt, ticket.AssignedToUserId);
 }

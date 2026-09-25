@@ -1,3 +1,5 @@
+using SupportAgent.Core.Interfaces;
+using SupportAgent.Core.Models;
 using SupportAgent.Core.Models.AI;
 using SupportAgent.Infrastructure.AI.Tools;
 using SupportAgent.Infrastructure.Services;
@@ -99,6 +101,64 @@ public class AIToolExecutorTests
 
         Assert.False(result.Success);
         Assert.Contains("customerId", result.Error, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_RejectsStructuredCopilotResponse_AsOrderArguments()
+    {
+        await using var context = TestDbContextFactory.CreateContext(
+            nameof(ExecuteAsync_RejectsStructuredCopilotResponse_AsOrderArguments));
+        var orderService = new RecordingOrderService();
+        var executor = new AIToolExecutor(
+            new CustomerService(context), orderService, KnowledgeServiceTestFactory.Create(context));
+
+        var result = await executor.ExecuteAsync(new AIToolCall
+        {
+            Id = "call-invalid-order",
+            Name = SupportToolDefinitions.GetOrderStatusToolName,
+            ArgumentsJson = """{"answer":"Missing order","suggestedActions":[],"confidence":0.9}"""
+        });
+
+        Assert.False(result.Success);
+        Assert.Equal("Argument 'orderId' must be a valid integer.", result.Error);
+        Assert.Equal(0, orderService.GetOrderCallCount);
+    }
+
+    private sealed class RecordingOrderService : IOrderService
+    {
+        public int GetOrderCallCount { get; private set; }
+
+        public Task<Order?> GetOrderAsync(int orderId, CancellationToken cancellationToken = default)
+        {
+            GetOrderCallCount++;
+            return Task.FromResult<Order?>(null);
+        }
+
+        public Task<IReadOnlyList<Order>> GetOrdersByCustomerAsync(
+            int customerId,
+            CancellationToken cancellationToken = default) =>
+            Task.FromResult<IReadOnlyList<Order>>([]);
+    }
+
+    [Theory]
+    [InlineData("{}")]
+    [InlineData("{\"orderId\":\"2\"}")]
+    [InlineData("{\"orderId\":2,\"answer\":\"bad\"}")]
+    public async Task ExecuteAsync_GetOrderStatus_RequiresExactIntegerSchema(string argumentsJson)
+    {
+        await using var context = TestDbContextFactory.CreateContext(
+            $"{nameof(ExecuteAsync_GetOrderStatus_RequiresExactIntegerSchema)}-{Guid.NewGuid()}");
+        var executor = ToolExecutorTestFactory.CreateExecutor(context);
+
+        var result = await executor.ExecuteAsync(new AIToolCall
+        {
+            Id = "call-invalid-schema",
+            Name = SupportToolDefinitions.GetOrderStatusToolName,
+            ArgumentsJson = argumentsJson
+        });
+
+        Assert.False(result.Success);
+        Assert.Contains("orderId", result.Error, StringComparison.Ordinal);
     }
 
     [Fact]

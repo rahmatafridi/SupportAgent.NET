@@ -15,6 +15,7 @@ export interface TicketListItem {
 export interface Ticket {
   id: number
   customerId: number
+  orderId: number | null
   subject: string
   status: string
   priority: string

@@ -86,6 +86,7 @@ public class SupportAgentDbContext : IdentityDbContext<ApplicationUser, Identity
 
     /// <summary>Tool audit records for AI copilot conversations.</summary>
     public DbSet<AIConversationToolAudit> AIConversationToolAudits => Set<AIConversationToolAudit>();
+    public DbSet<AISuggestedAction> AISuggestedActions => Set<AISuggestedAction>();
 
     /// <summary>
     /// Applies entity mappings and relationships for all support tables.
@@ -120,7 +121,7 @@ public class SupportAgentDbContext : IdentityDbContext<ApplicationUser, Identity
         {
             typeof(Customer), typeof(Order), typeof(Ticket), typeof(TicketMessage), typeof(TicketInternalNote),
             typeof(KnowledgeDocument), typeof(KnowledgeChunk), typeof(AIConversation),
-            typeof(AIConversationMessage), typeof(AIConversationToolAudit), typeof(AIUsageRecord)
+            typeof(AIConversationMessage), typeof(AIConversationToolAudit), typeof(AISuggestedAction), typeof(AIUsageRecord)
         })
         {
             modelBuilder.Entity(entityType).HasOne(typeof(Organization)).WithMany()
@@ -144,6 +145,7 @@ public class SupportAgentDbContext : IdentityDbContext<ApplicationUser, Identity
         modelBuilder.ApplyConfiguration(new AIConversationConfiguration());
         modelBuilder.ApplyConfiguration(new AIConversationMessageConfiguration());
         modelBuilder.ApplyConfiguration(new AIConversationToolAuditConfiguration());
+        modelBuilder.ApplyConfiguration(new AISuggestedActionConfiguration());
 
         modelBuilder.Entity<Customer>().HasQueryFilter(x => x.OrganizationId == _currentUser.OrganizationId);
         modelBuilder.Entity<Order>().HasQueryFilter(x => x.OrganizationId == _currentUser.OrganizationId);
@@ -155,5 +157,6 @@ public class SupportAgentDbContext : IdentityDbContext<ApplicationUser, Identity
         modelBuilder.Entity<AIConversation>().HasQueryFilter(x => x.OrganizationId == _currentUser.OrganizationId);
         modelBuilder.Entity<AIConversationMessage>().HasQueryFilter(x => x.OrganizationId == _currentUser.OrganizationId);
         modelBuilder.Entity<AIConversationToolAudit>().HasQueryFilter(x => x.OrganizationId == _currentUser.OrganizationId);
+        modelBuilder.Entity<AISuggestedAction>().HasQueryFilter(x => x.OrganizationId == _currentUser.OrganizationId);
     }
 }

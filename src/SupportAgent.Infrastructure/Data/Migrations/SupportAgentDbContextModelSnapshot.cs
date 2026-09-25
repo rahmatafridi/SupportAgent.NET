@@ -247,6 +247,64 @@ namespace SupportAgent.Infrastructure.Data.Migrations
                     b.ToTable("AIConversationToolAudits", (string)null);
                 });
 
+            modelBuilder.Entity("SupportAgent.Core.Models.AISuggestedAction", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("AIConversationId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("ActionType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<DateTime?>("ExecutedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Label")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<bool>("RequiresConfirmation")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<int>("TicketId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("TrustedArgumentsJson")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AIConversationId");
+
+                    b.HasIndex("OrganizationId");
+
+                    b.HasIndex("OrganizationId", "AIConversationId", "Status");
+
+                    b.ToTable("AISuggestedActions", (string)null);
+                });
+
             modelBuilder.Entity("SupportAgent.Core.Models.AIUsageRecord", b =>
                 {
                     b.Property<Guid>("Id")
@@ -306,6 +364,9 @@ namespace SupportAgent.Infrastructure.Data.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<Guid?>("ApplicationUserId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
@@ -332,6 +393,10 @@ namespace SupportAgent.Infrastructure.Data.Migrations
                         .HasColumnType("nvarchar(30)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("ApplicationUserId")
+                        .IsUnique()
+                        .HasFilter("[ApplicationUserId] IS NOT NULL");
 
                     b.HasIndex("OrganizationId");
 
@@ -526,6 +591,9 @@ namespace SupportAgent.Infrastructure.Data.Migrations
                     b.Property<int>("CustomerId")
                         .HasColumnType("int");
 
+                    b.Property<int?>("OrderId")
+                        .HasColumnType("int");
+
                     b.Property<Guid>("OrganizationId")
                         .HasColumnType("uniqueidentifier");
 
@@ -550,6 +618,8 @@ namespace SupportAgent.Infrastructure.Data.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("CustomerId");
+
+                    b.HasIndex("OrderId");
 
                     b.HasIndex("OrganizationId");
 
@@ -808,6 +878,23 @@ namespace SupportAgent.Infrastructure.Data.Migrations
                     b.Navigation("Conversation");
                 });
 
+            modelBuilder.Entity("SupportAgent.Core.Models.AISuggestedAction", b =>
+                {
+                    b.HasOne("SupportAgent.Core.Models.AIConversation", "Conversation")
+                        .WithMany("SuggestedActions")
+                        .HasForeignKey("AIConversationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("SupportAgent.Core.Models.Organization", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Conversation");
+                });
+
             modelBuilder.Entity("SupportAgent.Core.Models.AIUsageRecord", b =>
                 {
                     b.HasOne("SupportAgent.Core.Models.Organization", null)
@@ -819,6 +906,11 @@ namespace SupportAgent.Infrastructure.Data.Migrations
 
             modelBuilder.Entity("SupportAgent.Core.Models.Customer", b =>
                 {
+                    b.HasOne("SupportAgent.Infrastructure.Identity.ApplicationUser", null)
+                        .WithOne()
+                        .HasForeignKey("SupportAgent.Core.Models.Customer", "ApplicationUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("SupportAgent.Core.Models.Organization", null)
                         .WithMany()
                         .HasForeignKey("OrganizationId")
@@ -877,6 +969,11 @@ namespace SupportAgent.Infrastructure.Data.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("SupportAgent.Core.Models.Order", null)
+                        .WithMany()
+                        .HasForeignKey("OrderId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("SupportAgent.Core.Models.Organization", null)
                         .WithMany()
                         .HasForeignKey("OrganizationId")
@@ -934,6 +1031,8 @@ namespace SupportAgent.Infrastructure.Data.Migrations
             modelBuilder.Entity("SupportAgent.Core.Models.AIConversation", b =>
                 {
                     b.Navigation("Messages");
+
+                    b.Navigation("SuggestedActions");
 
                     b.Navigation("ToolAudits");
                 });

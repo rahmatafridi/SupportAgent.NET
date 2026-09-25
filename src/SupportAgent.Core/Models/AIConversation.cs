@@ -24,4 +24,6 @@ public class AIConversation
 
     /// <summary>Tool calls recorded during this conversation.</summary>
     public ICollection<AIConversationToolAudit> ToolAudits { get; set; } = new List<AIConversationToolAudit>();
+
+    public ICollection<AISuggestedAction> SuggestedActions { get; set; } = new List<AISuggestedAction>();
 }

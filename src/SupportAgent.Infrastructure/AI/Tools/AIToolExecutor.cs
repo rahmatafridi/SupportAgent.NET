@@ -3,6 +3,8 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using SupportAgent.Core.Interfaces;
 using SupportAgent.Core.Models.AI;
+using SupportAgent.Core.BusinessQuery;
+using SupportAgent.Infrastructure.BusinessQuery;
 
 namespace SupportAgent.Infrastructure.AI.Tools;
 
@@ -15,7 +17,11 @@ public class AIToolExecutor : IAIToolExecutor
     [
         SupportToolDefinitions.GetCustomerToolName,
         SupportToolDefinitions.GetOrderStatusToolName,
-        SupportToolDefinitions.SearchKnowledgeBaseToolName
+        SupportToolDefinitions.SearchKnowledgeBaseToolName,
+        SupportToolDefinitions.GetInvoiceToolName, SupportToolDefinitions.GetCustomerInvoicesToolName,
+        SupportToolDefinitions.GetCustomerBalanceToolName, SupportToolDefinitions.GetInventoryStatusToolName,
+        SupportToolDefinitions.GetSalesSummaryToolName, SupportToolDefinitions.GetLowStockProductsToolName,
+        SupportToolDefinitions.QueryBusinessDataToolName
     ];
 
     private readonly ICustomerService _customerService;
@@ -23,6 +29,9 @@ public class AIToolExecutor : IAIToolExecutor
     private readonly IKnowledgeService _knowledgeService;
     private readonly ILogger<AIToolExecutor>? _logger;
     private readonly IHostEnvironment? _hostEnvironment;
+    private readonly IInvoiceService? _invoiceService;
+    private readonly IInventoryService? _inventoryService;
+    private readonly IBusinessQueryService? _businessQueryService;
 
     /// <summary>
     /// Creates a new tool executor instance.
@@ -37,13 +46,19 @@ public class AIToolExecutor : IAIToolExecutor
         IOrderService orderService,
         IKnowledgeService knowledgeService,
         ILogger<AIToolExecutor>? logger = null,
-        IHostEnvironment? hostEnvironment = null)
+        IHostEnvironment? hostEnvironment = null,
+        IInvoiceService? invoiceService = null,
+        IInventoryService? inventoryService = null,
+        IBusinessQueryService? businessQueryService = null)
     {
         _customerService = customerService;
         _orderService = orderService;
         _knowledgeService = knowledgeService;
         _logger = logger;
         _hostEnvironment = hostEnvironment;
+        _invoiceService = invoiceService;
+        _inventoryService = inventoryService;
+        _businessQueryService = businessQueryService;
     }
 
     /// <inheritdoc />
@@ -71,6 +86,13 @@ public class AIToolExecutor : IAIToolExecutor
                 await ExecuteGetOrderStatusAsync(toolCall, cancellationToken),
             SupportToolDefinitions.SearchKnowledgeBaseToolName =>
                 await ExecuteSearchKnowledgeBaseAsync(toolCall, cancellationToken),
+            SupportToolDefinitions.GetInvoiceToolName => await Invoice(toolCall, "invoiceId", (id, ct) => _invoiceService!.GetInvoiceAsync(id, ct), cancellationToken),
+            SupportToolDefinitions.GetCustomerInvoicesToolName => await Invoice(toolCall, "customerId", (id, ct) => _invoiceService!.GetCustomerInvoicesAsync(id, ct), cancellationToken),
+            SupportToolDefinitions.GetCustomerBalanceToolName => await Invoice(toolCall, "customerId", (id, ct) => _invoiceService!.GetCustomerBalanceAsync(id, ct), cancellationToken),
+            SupportToolDefinitions.GetInventoryStatusToolName => await Invoice(toolCall, "productId", (id, ct) => _inventoryService!.GetInventoryAsync(id, ct), cancellationToken),
+            SupportToolDefinitions.GetLowStockProductsToolName => await LowStock(toolCall, cancellationToken),
+            SupportToolDefinitions.GetSalesSummaryToolName => await Sales(toolCall, cancellationToken),
+            SupportToolDefinitions.QueryBusinessDataToolName => await QueryBusinessData(toolCall, cancellationToken),
             _ => CreateErrorResult(toolCall, $"Tool '{toolCall.Name}' is not registered.")
         };
 
@@ -84,6 +106,23 @@ public class AIToolExecutor : IAIToolExecutor
         }
 
         return result;
+    }
+
+    private async Task<AIToolResult> Invoice<T>(AIToolCall call, string argument, Func<int, CancellationToken, Task<T>> execute, CancellationToken token)
+    {
+        if (!TryReadIntArgument(call.ArgumentsJson, argument, out var id) || id <= 0) return CreateErrorResult(call, $"Argument '{argument}' must be a valid positive integer.");
+        if ((_invoiceService is null && call.Name != SupportToolDefinitions.GetInventoryStatusToolName) || (_inventoryService is null && call.Name == SupportToolDefinitions.GetInventoryStatusToolName)) return CreateErrorResult(call, "Business service is unavailable.");
+        var value = await execute(id, token); return value is null ? CreateErrorResult(call, "Requested business record was not found.") : CreateSuccessResult(call, new { success = true, result = value });
+    }
+    private async Task<AIToolResult> LowStock(AIToolCall call, CancellationToken token) { if (call.ArgumentsJson.Trim() is not ("{}" or "")) return CreateErrorResult(call, "This tool accepts no arguments."); return CreateSuccessResult(call, new { success = true, result = await _inventoryService!.GetLowStockProductsAsync(token) }); }
+    private async Task<AIToolResult> Sales(AIToolCall call, CancellationToken token) { try { using var d = JsonDocument.Parse(call.ArgumentsJson); if (d.RootElement.EnumerateObject().Count() != 2 || !DateTime.TryParse(d.RootElement.GetProperty("startDate").GetString(), out var start) || !DateTime.TryParse(d.RootElement.GetProperty("endDate").GetString(), out var end)) return CreateErrorResult(call, "startDate and endDate must be valid dates."); return CreateSuccessResult(call, new { success = true, result = await _invoiceService!.GetSalesSummaryAsync(start.Date, end.Date, token) }); } catch (Exception e) when (e is JsonException or KeyNotFoundException or ArgumentException) { return CreateErrorResult(call, e is ArgumentException ? e.Message : "Invalid sales summary arguments."); } }
+    private async Task<AIToolResult> QueryBusinessData(AIToolCall call, CancellationToken token)
+    {
+        if (!TryReadStringArgument(call.ArgumentsJson, "question", out var question) || question.Length > 1000)
+            return CreateErrorResult(call, "Argument 'question' must be a non-empty string of at most 1000 characters.");
+        if (_businessQueryService is null) return CreateErrorResult(call, "Business query service is unavailable.");
+        try { return CreateSuccessResult(call, new { success = true, result = await _businessQueryService.AskAsync(question, token) }); }
+        catch (BusinessQueryException exception) { return CreateErrorResult(call, exception.Message); }
     }
 
     /// <summary>

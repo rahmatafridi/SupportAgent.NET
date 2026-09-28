@@ -153,6 +153,354 @@ namespace SupportAgent.Infrastructure.Data.Migrations
                     b.ToTable("AspNetUserTokens", (string)null);
                 });
 
+            modelBuilder.Entity("SupportAgent.Core.BusinessQuery.BusinessQueryAudit", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("ApplicationUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("DataSourceId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("DataSourceName")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("DataSourceProvider")
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<long>("DurationMs")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("ErrorCode")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("QueryPlanJson")
+                        .IsRequired()
+                        .HasMaxLength(8000)
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Question")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<int>("RowCount")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("Succeeded")
+                        .HasColumnType("bit");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrganizationId");
+
+                    b.HasIndex("OrganizationId", "CreatedAt");
+
+                    b.ToTable("BusinessQueryAudits");
+                });
+
+            modelBuilder.Entity("SupportAgent.Core.ExternalData.ExternalDataScope", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<Guid>("ExternalDataSourceId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<bool>("IsEnabled")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ExternalDataSourceId");
+
+                    b.HasIndex("OrganizationId");
+
+                    b.HasIndex("OrganizationId", "ExternalDataSourceId", "Name")
+                        .IsUnique();
+
+                    b.ToTable("ExternalDataScopes");
+                });
+
+            modelBuilder.Entity("SupportAgent.Core.ExternalData.ExternalDataScopeEntity", b =>
+                {
+                    b.Property<Guid>("ExternalDataScopeId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("ExternalEntityMappingId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("ExternalDataScopeId", "ExternalEntityMappingId");
+
+                    b.HasIndex("ExternalEntityMappingId");
+
+                    b.ToTable("ExternalDataScopeEntities");
+                });
+
+            modelBuilder.Entity("SupportAgent.Core.ExternalData.ExternalDataSource", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<bool>("IsEnabled")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("Provider")
+                        .HasColumnType("int");
+
+                    b.Property<string>("SecretKey")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrganizationId");
+
+                    b.HasIndex("OrganizationId", "Name")
+                        .IsUnique();
+
+                    b.ToTable("ExternalDataSources");
+                });
+
+            modelBuilder.Entity("SupportAgent.Core.ExternalData.ExternalEntityMapping", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("BusinessEntityName")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<string>("Concepts")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<string>("DefaultRecencyField")
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("DisplayName")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<Guid>("ExternalDataSourceId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("ExternalSchemaName")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<string>("ExternalTableName")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<bool>("IsEnabled")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsValid")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("ObjectType")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("ValidationMessage")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ExternalDataSourceId");
+
+                    b.HasIndex("OrganizationId");
+
+                    b.ToTable("ExternalEntityMappings");
+                });
+
+            modelBuilder.Entity("SupportAgent.Core.ExternalData.ExternalFieldMapping", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("BusinessFieldName")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<string>("Concepts")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("DataType")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("DisplayName")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<string>("ExternalColumnName")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<Guid>("ExternalEntityMappingId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<bool>("IsQueryable")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsSensitive")
+                        .HasColumnType("bit");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ExternalEntityMappingId");
+
+                    b.HasIndex("OrganizationId");
+
+                    b.ToTable("ExternalFieldMappings");
+                });
+
+            modelBuilder.Entity("SupportAgent.Core.ExternalData.ExternalRelationshipMapping", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Concepts")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<string>("DiscoveredForeignKeyName")
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<Guid>("ExternalDataSourceId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("FromEntity")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<string>("FromField")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<bool>("IsEnabled")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("RelationshipType")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)")
+                        .HasDefaultValue("ManyToOne");
+
+                    b.Property<string>("ToEntity")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<string>("ToField")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrganizationId");
+
+                    b.HasIndex("OrganizationId", "ExternalDataSourceId", "FromEntity", "Name")
+                        .IsUnique();
+
+                    b.ToTable("ExternalRelationshipMappings");
+                });
+
             modelBuilder.Entity("SupportAgent.Core.Models.AIConversation", b =>
                 {
                     b.Property<Guid>("Id")
@@ -406,6 +754,161 @@ namespace SupportAgent.Infrastructure.Data.Migrations
                     b.ToTable("Customers", (string)null);
                 });
 
+            modelBuilder.Entity("SupportAgent.Core.Models.InventoryItem", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("ProductId")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("QuantityOnHand")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("ReorderLevel")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrganizationId");
+
+                    b.HasIndex("ProductId")
+                        .IsUnique();
+
+                    b.HasIndex("OrganizationId", "ProductId")
+                        .IsUnique();
+
+                    b.ToTable("InventoryItems");
+                });
+
+            modelBuilder.Entity("SupportAgent.Core.Models.Invoice", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("CustomerId")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("DiscountAmount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime?>("DueDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("InvoiceNumber")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<DateTime>("IssueDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<decimal>("Subtotal")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("TaxAmount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("TotalAmount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CustomerId");
+
+                    b.HasIndex("OrganizationId");
+
+                    b.HasIndex("OrganizationId", "InvoiceNumber")
+                        .IsUnique();
+
+                    b.ToTable("Invoices");
+                });
+
+            modelBuilder.Entity("SupportAgent.Core.Models.InvoiceItem", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<decimal>("DiscountAmount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<int>("InvoiceId")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("LineTotal")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int?>("ProductId")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("Quantity")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("TaxAmount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("UnitPrice")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("InvoiceId");
+
+                    b.HasIndex("OrganizationId");
+
+                    b.HasIndex("ProductId");
+
+                    b.ToTable("InvoiceItems");
+                });
+
             modelBuilder.Entity("SupportAgent.Core.Models.KnowledgeChunk", b =>
                 {
                     b.Property<int>("Id")
@@ -544,6 +1047,51 @@ namespace SupportAgent.Infrastructure.Data.Migrations
                     b.ToTable("Orders", (string)null);
                 });
 
+            modelBuilder.Entity("SupportAgent.Core.Models.OrderItem", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<decimal>("LineTotal")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<int>("OrderId")
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int?>("ProductId")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("Quantity")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("UnitPrice")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrderId");
+
+                    b.HasIndex("OrganizationId");
+
+                    b.HasIndex("ProductId");
+
+                    b.ToTable("OrderItems");
+                });
+
             modelBuilder.Entity("SupportAgent.Core.Models.Organization", b =>
                 {
                     b.Property<Guid>("Id")
@@ -572,6 +1120,97 @@ namespace SupportAgent.Infrastructure.Data.Migrations
                         .IsUnique();
 
                     b.ToTable("Organizations");
+                });
+
+            modelBuilder.Entity("SupportAgent.Core.Models.Payment", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<decimal>("Amount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("InvoiceId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Method")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Notes")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("PaymentDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("PaymentReference")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("InvoiceId");
+
+                    b.HasIndex("OrganizationId");
+
+                    b.ToTable("Payments");
+                });
+
+            modelBuilder.Entity("SupportAgent.Core.Models.Product", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Description")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Sku")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<decimal>("UnitPrice")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrganizationId");
+
+                    b.HasIndex("OrganizationId", "Sku")
+                        .IsUnique();
+
+                    b.ToTable("Products");
                 });
 
             modelBuilder.Entity("SupportAgent.Core.Models.Ticket", b =>
@@ -838,6 +1477,103 @@ namespace SupportAgent.Infrastructure.Data.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("SupportAgent.Core.BusinessQuery.BusinessQueryAudit", b =>
+                {
+                    b.HasOne("SupportAgent.Core.Models.Organization", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("SupportAgent.Core.ExternalData.ExternalDataScope", b =>
+                {
+                    b.HasOne("SupportAgent.Core.ExternalData.ExternalDataSource", "DataSource")
+                        .WithMany("Scopes")
+                        .HasForeignKey("ExternalDataSourceId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("SupportAgent.Core.Models.Organization", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("DataSource");
+                });
+
+            modelBuilder.Entity("SupportAgent.Core.ExternalData.ExternalDataScopeEntity", b =>
+                {
+                    b.HasOne("SupportAgent.Core.ExternalData.ExternalDataScope", "Scope")
+                        .WithMany("Entities")
+                        .HasForeignKey("ExternalDataScopeId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("SupportAgent.Core.ExternalData.ExternalEntityMapping", "Entity")
+                        .WithMany()
+                        .HasForeignKey("ExternalEntityMappingId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Entity");
+
+                    b.Navigation("Scope");
+                });
+
+            modelBuilder.Entity("SupportAgent.Core.ExternalData.ExternalDataSource", b =>
+                {
+                    b.HasOne("SupportAgent.Core.Models.Organization", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("SupportAgent.Core.ExternalData.ExternalEntityMapping", b =>
+                {
+                    b.HasOne("SupportAgent.Core.ExternalData.ExternalDataSource", "DataSource")
+                        .WithMany("Entities")
+                        .HasForeignKey("ExternalDataSourceId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("SupportAgent.Core.Models.Organization", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("DataSource");
+                });
+
+            modelBuilder.Entity("SupportAgent.Core.ExternalData.ExternalFieldMapping", b =>
+                {
+                    b.HasOne("SupportAgent.Core.ExternalData.ExternalEntityMapping", "Entity")
+                        .WithMany("Fields")
+                        .HasForeignKey("ExternalEntityMappingId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("SupportAgent.Core.Models.Organization", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Entity");
+                });
+
+            modelBuilder.Entity("SupportAgent.Core.ExternalData.ExternalRelationshipMapping", b =>
+                {
+                    b.HasOne("SupportAgent.Core.Models.Organization", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("SupportAgent.Core.Models.AIConversation", b =>
                 {
                     b.HasOne("SupportAgent.Core.Models.Organization", null)
@@ -921,6 +1657,64 @@ namespace SupportAgent.Infrastructure.Data.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("SupportAgent.Core.Models.InventoryItem", b =>
+                {
+                    b.HasOne("SupportAgent.Core.Models.Organization", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("SupportAgent.Core.Models.Product", "Product")
+                        .WithOne("Inventory")
+                        .HasForeignKey("SupportAgent.Core.Models.InventoryItem", "ProductId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Product");
+                });
+
+            modelBuilder.Entity("SupportAgent.Core.Models.Invoice", b =>
+                {
+                    b.HasOne("SupportAgent.Core.Models.Customer", "Customer")
+                        .WithMany()
+                        .HasForeignKey("CustomerId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("SupportAgent.Core.Models.Organization", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Customer");
+                });
+
+            modelBuilder.Entity("SupportAgent.Core.Models.InvoiceItem", b =>
+                {
+                    b.HasOne("SupportAgent.Core.Models.Invoice", "Invoice")
+                        .WithMany("Items")
+                        .HasForeignKey("InvoiceId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("SupportAgent.Core.Models.Organization", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("SupportAgent.Core.Models.Product", "Product")
+                        .WithMany()
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("Invoice");
+
+                    b.Navigation("Product");
+                });
+
             modelBuilder.Entity("SupportAgent.Core.Models.KnowledgeChunk", b =>
                 {
                     b.HasOne("SupportAgent.Core.Models.KnowledgeDocument", "KnowledgeDocument")
@@ -962,6 +1756,56 @@ namespace SupportAgent.Infrastructure.Data.Migrations
                         .IsRequired();
 
                     b.Navigation("Customer");
+                });
+
+            modelBuilder.Entity("SupportAgent.Core.Models.OrderItem", b =>
+                {
+                    b.HasOne("SupportAgent.Core.Models.Order", "Order")
+                        .WithMany()
+                        .HasForeignKey("OrderId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("SupportAgent.Core.Models.Organization", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("SupportAgent.Core.Models.Product", "Product")
+                        .WithMany()
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("Order");
+
+                    b.Navigation("Product");
+                });
+
+            modelBuilder.Entity("SupportAgent.Core.Models.Payment", b =>
+                {
+                    b.HasOne("SupportAgent.Core.Models.Invoice", "Invoice")
+                        .WithMany("Payments")
+                        .HasForeignKey("InvoiceId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("SupportAgent.Core.Models.Organization", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Invoice");
+                });
+
+            modelBuilder.Entity("SupportAgent.Core.Models.Product", b =>
+                {
+                    b.HasOne("SupportAgent.Core.Models.Organization", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("SupportAgent.Core.Models.Ticket", b =>
@@ -1031,6 +1875,23 @@ namespace SupportAgent.Infrastructure.Data.Migrations
                     b.Navigation("Organization");
                 });
 
+            modelBuilder.Entity("SupportAgent.Core.ExternalData.ExternalDataScope", b =>
+                {
+                    b.Navigation("Entities");
+                });
+
+            modelBuilder.Entity("SupportAgent.Core.ExternalData.ExternalDataSource", b =>
+                {
+                    b.Navigation("Entities");
+
+                    b.Navigation("Scopes");
+                });
+
+            modelBuilder.Entity("SupportAgent.Core.ExternalData.ExternalEntityMapping", b =>
+                {
+                    b.Navigation("Fields");
+                });
+
             modelBuilder.Entity("SupportAgent.Core.Models.AIConversation", b =>
                 {
                     b.Navigation("Messages");
@@ -1047,9 +1908,21 @@ namespace SupportAgent.Infrastructure.Data.Migrations
                     b.Navigation("Tickets");
                 });
 
+            modelBuilder.Entity("SupportAgent.Core.Models.Invoice", b =>
+                {
+                    b.Navigation("Items");
+
+                    b.Navigation("Payments");
+                });
+
             modelBuilder.Entity("SupportAgent.Core.Models.KnowledgeDocument", b =>
                 {
                     b.Navigation("Chunks");
+                });
+
+            modelBuilder.Entity("SupportAgent.Core.Models.Product", b =>
+                {
+                    b.Navigation("Inventory");
                 });
 
             modelBuilder.Entity("SupportAgent.Core.Models.Ticket", b =>

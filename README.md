@@ -1,5 +1,17 @@
 # SupportAgent.NET
 
+## ERP / CRM Business Data
+
+Phase 12 adds tenant-scoped Products, Invoices, Invoice Items, Payments, and Inventory. The model is `Customer -> Invoices -> Invoice Items -> Products`, with `Invoice -> Payments` and `Product -> Inventory`. Staff use `/invoices`; customers see only their own records at `/portal/invoices`.
+
+## Invoice Intelligence
+
+Controlled native tools include `GetInvoice`, `GetCustomerInvoices`, `GetCustomerBalance`, `GetInventoryStatus`, `GetLowStockProducts`, and `GetSalesSummary`. The LLM does **not** calculate financial truth: decimal totals, payments, balances, inventory state, and summaries come from tenant-scoped .NET services. Arbitrary SQL is not available.
+
+## Invoice PDF
+
+Staff and customers can download trusted database-backed PDFs from invoice details. PDFs use PDFsharp 6.2.3 (MIT); the LLM never generates totals, taxes, discounts, or payments.
+
 [![GitHub](https://img.shields.io/badge/GitHub-rahmatafridi%2FSupportAgent.NET-181717?logo=github)](https://github.com/rahmatafridi/SupportAgent.NET)
 
 Open-source AI Customer Support Agent Starter Kit built with **ASP.NET Core, React, SQL Server, native LLM tool calling, RAG, embeddings, and conversation state**.
@@ -824,3 +836,284 @@ Customer -> Login -> My Tickets -> Create Ticket -> Send Message
 Portal APIs are `GET /api/portal/me`, `GET|POST /api/portal/tickets`, `GET /api/portal/tickets/{id}`, `GET|POST /api/portal/tickets/{id}/messages`, and `GET /api/portal/orders`. Customer and organization IDs are never accepted from the browser; both are resolved from the authenticated account. Cross-customer ticket and order access returns `404`.
 
 Customer conversation is **Customer ↔ Human Support Agent**. The internal assistant is **Human Support Agent ↔ AI**. Customers cannot access internal notes, AI conversations, tools, sources, knowledge management, assignment, status controls, or administration. AI never sends messages automatically.
+## Invoice Suggested Actions
+
+The staff AI copilot can recommend **View invoice**, **Download invoice PDF**, **View customer invoices**, and
+**Check customer balance**. These actions are always initiated by a human: the LLM recommends, the human clicks,
+the backend validates the ticket, tenant, customer, and invoice, and then the normal .NET invoice service executes.
+Navigation and download URLs are generated only by the server from validated invoice IDs.
+
+Invoice suggested actions are read-only. The AI cannot create, cancel, modify, refund, delete, or record payment
+against an invoice, and these staff actions are not exposed in the customer portal.
+
+## Natural-Language Business Queries
+
+Authenticated administrators and support agents can use **Business Intelligence** at `/business-query` for
+questions such as “Show overdue invoices”, “Which products are low in stock?”, and “Show invoice totals grouped
+by customer”. The same capability is available to the support copilot through the controlled
+`QueryBusinessData` native tool.
+
+The flow is: question → provider-independent LLM QueryPlan → .NET validator → tenant-filtered EF Core query →
+structured result → grounded AI explanation. The LLM never receives database credentials and never executes SQL.
+Only explicitly registered entities, fields, relationships, operators, and aggregations are available. Queries
+are read-only, limited to 100 rows, time-bounded, and audited without storing returned business rows.
+
+Database values are treated as untrusted data rather than instructions. Runtime queries retain EF Core global
+tenant filters, and `OrganizationId` cannot be selected or supplied by either the model or frontend. To extend the
+internal demo module, register a new entity and its fields in `BusinessSchemaService`, then add its controlled EF projection to
+`BusinessQueryExecutor`. External sources use the separate dynamic discovery and approval flow below.
+# Business intelligence optimization
+
+Business Intelligence uses a deterministic relevance selector to send at most four related allowlisted entities to the planner. The full schema and validator remain the security boundary. Trusted computed fields (`IsOverdue`, `IsFullyPaid`, and `IsLowStock`) are calculated in .NET; the model never calculates financial values. Planner and explanation usage are recorded separately, and the UI formats display labels, money, dates, booleans, empty results, and query details for people rather than exposing raw schema values.
+
+## External ERP / CRM Connections
+
+### Dynamic External Schema Mapping
+
+SupportAgent.NET does not require predefined external table names. Physical objects such as `tbl_sal_mst` and `cus_mst` can be exposed as logical `SalesInvoices` and `Customers` through administrator-owned metadata—without adding table-specific C# classes.
+
+The setup flow is: connect with a server-side secret reference, discover tables/views and columns, explicitly approve objects and fields, optionally map friendly names and relationships, optionally group them into an AI data scope, then query through the validated read-only pipeline. New objects and fields remain unavailable until approved.
+
+Schema sent to AI is reduced as follows:
+
+`all database entities -> approved entities -> selected scope -> runtime-relevant entities`
+
+For production integrations, prefer read-only views such as `ai_customers`, `ai_sales`, and `ai_inventory`. Views can hide sensitive fields, stabilize legacy schemas, simplify joins, and restrict rows. Connection strings remain in User Secrets, environment variables, or another secure configuration provider and never enter browser responses, prompts, or audit records.
+
+### External Relationship Mapping
+
+External tables can participate in joined business questions only after their entities, fields, and relationships are explicitly approved. SQL Server foreign keys are discovered as suggestions; discovery alone grants no query access. An administrator can approve a discovered relationship or define one manually using approved entity and field dropdowns. Raw `ON` expressions and arbitrary SQL are never accepted.
+
+The flow is: approved entities → approved fields → approved relationships → optional AI data scope → relevant schema selection → logical `BusinessQueryPlan` → validated .NET JOIN compiler.
+
+For example, a physical foreign key `kits.owner_id → users.id` can be represented logically as `Kits.Owner → Users`. Separate semantic paths between the same entities remain separate, such as `Owner`, `CreatedByUser`, and `UpdatedByUser`, with optional descriptions and concepts helping the planner choose correctly. Related fields use logical paths such as `Owner.Email`; controlled traversal is limited to three relationships. Ambiguous paths require clarification.
+
+The compiler resolves every logical path from persisted, tenant-scoped metadata and emits one bounded, parameterized `SELECT` with deterministic `LEFT JOIN` behavior. One-to-many results are not silently deduplicated; plans may use a trusted distinct count when the requested metric requires counting base records. Query Details exposes logical relationship paths, never physical SQL.
+
+Phase 14 adds optional, read-only SQL Server sources. The SupportAgent database remains the application database. The security chain is: external SQL Server → read-only views/login → connector discovery → administrator-approved mappings → logical `BusinessSchema` → relevant schema selection → LLM-created `BusinessQueryPlan` → validator → .NET parameterized SELECT compiler → limited result → AI explanation. The LLM never receives credentials, physical SQL, or permission to write.
+
+Configure a secret outside persisted application rows:
+
+```powershell
+dotnet user-secrets set "ExternalDataSources:ERP_DEMO:ConnectionString" "Server=localhost;Database=SupportAgentExternalDemo;Integrated Security=true;TrustServerCertificate=true"
+```
+
+### Phase 14.2 configuration and use-case roadmap
+
+Use this checklist when connecting and validating a real external SQL Server database. The names below are examples;
+runtime querying is driven by the mappings saved by an administrator and does not require matching these names.
+
+#### 1. Prepare read-only database access
+
+Create a dedicated login with `SELECT` permission only on the tables or views intended for reporting. Prefer stable,
+purpose-built views that exclude passwords, authentication data, secrets, tokens, and other sensitive columns. Confirm
+that the API host can reach SQL Server and that TLS and certificate settings match the environment.
+
+#### 2. Store the connection string outside the application database
+
+The **Secret key** entered in the UI is a configuration reference, not a connection string. For example, entering
+`ERP_MAIN_DB` means the API resolves `ExternalDataSources:ERP_MAIN_DB:ConnectionString`.
+
+```powershell
+dotnet user-secrets set `
+  "ExternalDataSources:ERP_MAIN_DB:ConnectionString" `
+  "Server=<SERVER>;Database=<DATABASE>;User ID=<READ_ONLY_USER>;Password=<PASSWORD>;Encrypt=True;TrustServerCertificate=True;Connect Timeout=30;" `
+  --project "src/SupportAgent.Api/SupportAgent.Api.csproj"
+```
+
+For Windows authentication during local development:
+
+```powershell
+dotnet user-secrets set `
+  "ExternalDataSources:ERP_MAIN_DB:ConnectionString" `
+  "Server=localhost;Database=<DATABASE>;Trusted_Connection=True;TrustServerCertificate=True;" `
+  --project "src/SupportAgent.Api/SupportAgent.Api.csproj"
+```
+
+Verify only the configured reference names when troubleshooting; avoid copying secrets into logs or screenshots:
+
+```powershell
+dotnet user-secrets list --project "src/SupportAgent.Api/SupportAgent.Api.csproj" |
+  Where-Object { $_ -like "ExternalDataSources:*:ConnectionString*" } |
+  ForEach-Object { ($_ -split " = ", 2)[0] }
+```
+
+Environment-variable alternative:
+
+```text
+SUPPORTAGENT_DATASOURCE_ERP_MAIN_DB=<connection string>
+```
+
+Restart the API after adding or changing a secret.
+
+#### 3. Register and test the source
+
+1. Sign in as an Admin and open `/admin/data-sources`.
+2. Enter a display name, select SQL Server, and enter only the secret reference such as `ERP_MAIN_DB`.
+3. Add the source and select **Test connection**.
+4. Resolve network, credentials, database access, TLS, or read-only permission errors before continuing.
+5. Select **Discover / refresh schema**. Discovery does not approve anything automatically.
+
+#### 4. Approve entity and field mappings
+
+For each table or view that AI may query:
+
+1. Open the discovered object.
+2. Assign a stable logical entity name, display name, description, and useful concepts.
+3. Select only safe columns required by supported use cases.
+4. Assign logical field names, display labels, descriptions, and concepts.
+5. Leave credentials, hashes, tokens, security fields, and unnecessary personal data unapproved.
+6. Save the mapping and reopen it to confirm the selected columns were persisted.
+
+Physical names may be legacy-specific. For example, a physical `q_alpha.event_stamp` may be exposed logically as
+`Activities.ActivityDate`. The planner sees the logical schema; the compiler resolves the approved physical mapping.
+
+#### 5. Configure recency for latest/oldest questions
+
+Approve the appropriate date/time column and select it as the entity's **Default date/time field for latest and oldest
+queries**. This setting is required for questions such as "Show the latest 10 activities." The runtime uses
+`DefaultRecencyField`; it must not guess from status or an unrelated date.
+
+Example:
+
+```text
+Physical: q_alpha.event_stamp
+Logical: Activities.ActivityDate
+DefaultRecencyField: ActivityDate
+```
+
+#### 6. Approve relationships
+
+Approve a discovered foreign key or create a manual relationship only after both entities and join fields are approved.
+Give each path a semantic logical name, description, and concepts so similarly shaped relationships remain distinct.
+
+```text
+Physical: kits.owner_id -> users.id
+Logical name: Owner
+Description: The user or customer who owns this record
+Concepts: owner, customer, person
+```
+
+If the same source entity also links to users through audit fields, configure separate paths such as `CreatedByUser` and
+`UpdatedByUser`. Questions then use logical related fields such as `Owner.FirstName`; raw join expressions are never
+accepted. If no safe display field is approved on the target entity, approve one or expect a safe configuration error
+instead of an identifier being presented as a name.
+
+#### 7. Create data scopes
+
+Create an optional scope and select the approved entity mappings it may expose. Scope behavior depends on stored mapping
+IDs, not the scope's display name. Renaming `Kits and Orders` to `ABC Test` without changing its members does not change
+query behavior. Include every entity required for an approved relationship traversal.
+
+#### 8. Enable and verify the source
+
+1. Enable the source after mappings, relationships, and scopes are ready.
+2. Open `/business-query`.
+3. Select the external source and, if applicable, its scope.
+4. Run a simple base-entity query first.
+5. Test recency sorting.
+6. Test each approved relationship and human-readable target field.
+7. Expand **Query details** and verify the source, scope, base entity, selected entities, relationship, selected fields,
+   sort, and limit.
+8. Confirm the Results table and natural-language answer describe the same validated rows.
+
+#### 9. Recommended verification use cases
+
+Base entity and recency:
+
+```text
+Show the latest 10 activities.
+```
+
+Expected: the configured logical entity only, sorted by its `DefaultRecencyField` descending.
+
+Relationship traversal:
+
+```text
+Show the latest 10 kits with the owner's name.
+```
+
+Expected: base fields plus approved `Owner.<name field>` paths. Rows whose foreign key is null may have empty related
+values because joins intentionally use `LEFT JOIN`.
+
+Require an existing relationship value:
+
+```text
+Show the latest 10 kits with the owner's name only where the owner ID is present.
+```
+
+Expected: an `IsNotNull` filter on the approved logical owner identifier plus the `Owner` relationship fields.
+
+Approved contact field:
+
+```text
+Show the latest 10 kits with the owner's email.
+```
+
+Expected: `Owner.Email` only when Email is explicitly approved and non-sensitive.
+
+Arbitrary-schema portability check:
+
+```text
+q_alpha.a_key       -> Events.EventId
+q_alpha.b_ref       -> Events.PersonId
+q_alpha.event_stamp -> Events.ActivityDate
+q_beta.b_key        -> People.PersonId
+q_beta.display_value -> People.DisplayValue
+Relationship: Events.Person -> People
+DefaultRecencyField: ActivityDate
+Question: Show the latest 10 events with the person's display value.
+```
+
+Expected: Events and People are selected from metadata, the Person relationship generates the join, ActivityDate controls
+sorting, and no production code change is required.
+
+#### 10. Operational and security verification
+
+- Mutation requests use the existing cookie authentication and antiforgery flow.
+- Only Admin users configure sources, mappings, relationships, and scopes.
+- Connection strings never enter application rows, browser responses, AI prompts, or audit records.
+- Discovery grants no query permission; only approved, queryable, non-sensitive fields enter `BusinessSchema`.
+- The LLM produces a logical `BusinessQueryPlan`, never executable SQL.
+- The validator rejects unknown entities, fields, relationships, operators, and excessive limits.
+- The compiler resolves identifiers from persisted metadata and produces one bounded, parameterized, read-only `SELECT`.
+- Returned rows are size- and count-limited, and query activity is audited without persisting result rows.
+- Explanation output is grounded in the validated result; SQL-like explanation text is replaced by a safe .NET summary.
+
+#### 11. Troubleshooting
+
+- **Secret is not configured:** ensure the UI secret reference exactly matches the configuration key and restart the API.
+- **Connection failed:** verify host reachability, database name, credentials, TLS settings, timeout, and `SELECT` permission.
+- **No entities available:** discover schema, approve at least one entity and safe field, save, and enable the source.
+- **Relationship unavailable:** approve both endpoint entities and join fields, then approve the relationship.
+- **Name returns an ID:** approve a safe target display field and give the relationship clear name/description/concepts.
+- **Latest query cannot run:** approve a date/time field and configure `DefaultRecencyField`.
+- **Related values are empty:** check whether the base foreign key is null or has a matching target row; `LEFT JOIN` retains
+  the base row.
+- **Schema drift:** refresh discovery and repair mappings for renamed or removed physical objects before re-enabling them.
+- **Pending EF model changes:** apply committed migrations; do not suppress `PendingModelChangesWarning`.
+- **Address already in use:** stop the older API process or use another configured port before starting a second instance.
+
+#### 12. Phase 14.2 completion checklist
+
+- [ ] Read-only database identity created and tested
+- [ ] Secret reference configured outside persisted application data
+- [ ] Source registered and connection tested
+- [ ] Schema discovered
+- [ ] Required entities explicitly approved
+- [ ] Required safe fields explicitly approved
+- [ ] Sensitive fields excluded
+- [ ] Logical metadata and concepts reviewed
+- [ ] Default recency fields configured
+- [ ] Relationships approved and disambiguated
+- [ ] Data scopes created and membership reviewed
+- [ ] Base, latest, relationship, null-related, and arbitrary-schema queries verified
+- [ ] Query Details matches the validated result
+- [ ] Admin authorization, CSRF, read-only permissions, limits, and auditing verified
+- [ ] API tests, backend build, and React build pass
+
+Alternatively set `SUPPORTAGENT_DATASOURCE_ERP_DEMO`. Never commit production credentials. Create a dedicated SQL login with `SELECT` only on approved tables or, preferably, safe views. Do not grant `db_owner`, `db_datawriter`, `ALTER`, `CONTROL`, `EXECUTE`, `INSERT`, `UPDATE`, or `DELETE`.
+
+The optional [demo script](scripts/external-erp-demo.sql) uses legacy physical names. Example mappings are `erp_customer.customer_code → Customers.CustomerCode`, `erp_customer.customer_name → Customers.Name`, and `erp_sales_invoice.doc_no → SalesInvoices.InvoiceNumber`.
+
+Supported discovery types include integer, decimal/money, bit, character, date/time, and uniqueidentifier values. Binary, image, XML, geography, hierarchy, stored procedures, custom SQL formulas, writes, PostgreSQL, MySQL, and automatic schema approval are not supported. A source is assumed to contain data belonging to its configured SupportAgent organization. For a shared external database, expose a tenant-specific database/view/login; external row-level tenant-column mapping is not implemented.

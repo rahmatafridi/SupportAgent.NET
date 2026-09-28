@@ -21,6 +21,9 @@ public sealed class AIUsageBreakdown
 {
     public string Provider { get; set; } = string.Empty;
     public string Model { get; set; } = string.Empty;
+    public string Feature { get; set; } = string.Empty;
     public int Requests { get; set; }
+    public long InputTokens { get; set; }
+    public long OutputTokens { get; set; }
     public long TotalTokens { get; set; }
 }

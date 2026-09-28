@@ -1,0 +1,2 @@
+export interface InvoiceListItem { id:number; customerId:number; customerName:string; invoiceNumber:string; status:string; issueDate:string; dueDate:string|null; totalAmount:number; paidAmount:number; outstandingBalance:number }
+export interface InvoiceDetail extends InvoiceListItem { customerEmail:string; subtotal:number; taxAmount:number; discountAmount:number; items:{id:number;description:string;quantity:number;unitPrice:number;lineTotal:number}[]; payments:{id:number;paymentReference:string;amount:number;paymentDate:string;method:string|null}[] }

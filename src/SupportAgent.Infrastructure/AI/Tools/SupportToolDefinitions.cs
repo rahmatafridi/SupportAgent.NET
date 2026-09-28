@@ -26,6 +26,13 @@ public static class SupportToolDefinitions
     /// Tool name used by the LLM to search the company knowledge base.
     /// </summary>
     public const string SearchKnowledgeBaseToolName = "SearchKnowledgeBase";
+    public const string GetInvoiceToolName = "GetInvoice";
+    public const string GetCustomerInvoicesToolName = "GetCustomerInvoices";
+    public const string GetCustomerBalanceToolName = "GetCustomerBalance";
+    public const string GetInventoryStatusToolName = "GetInventoryStatus";
+    public const string GetSalesSummaryToolName = "GetSalesSummary";
+    public const string GetLowStockProductsToolName = "GetLowStockProducts";
+    public const string QueryBusinessDataToolName = "QueryBusinessData";
 
     /// <summary>
     /// Returns all tools currently available to the AI assistant.
@@ -35,8 +42,21 @@ public static class SupportToolDefinitions
     [
         GetOrderStatus,
         GetCustomer,
-        SearchKnowledgeBase
+        SearchKnowledgeBase,
+        IntTool(GetInvoiceToolName, "Gets trusted invoice details, items, payments, totals, and outstanding balance.", "invoiceId"),
+        IntTool(GetCustomerInvoicesToolName, "Gets the customer's invoices and trusted outstanding balances.", "customerId"),
+        IntTool(GetCustomerBalanceToolName, "Gets the customer balance calculated by .NET business services.", "customerId"),
+        IntTool(GetInventoryStatusToolName, "Gets product inventory and low-stock status.", "productId"),
+        new() { Name = GetLowStockProductsToolName, Description = "Gets all active products at or below reorder level.", ParametersJsonSchema = "{\"type\":\"object\",\"properties\":{},\"additionalProperties\":false}" },
+        new() { Name = GetSalesSummaryToolName, Description = "Gets a trusted sales summary for a validated date range.", ParametersJsonSchema = "{\"type\":\"object\",\"properties\":{\"startDate\":{\"type\":\"string\",\"format\":\"date\"},\"endDate\":{\"type\":\"string\",\"format\":\"date\"}},\"required\":[\"startDate\",\"endDate\"],\"additionalProperties\":false}" },
+        new() { Name = QueryBusinessDataToolName, Description = "Safely answers flexible read-only reporting questions using an allowlisted business schema. Use dedicated tools for known record lookups and this tool for reports, rankings, filters, and grouped business questions.", ParametersJsonSchema = "{\"type\":\"object\",\"properties\":{\"question\":{\"type\":\"string\",\"maxLength\":1000}},\"required\":[\"question\"],\"additionalProperties\":false}" }
     ];
+
+    private static AIToolDefinition IntTool(string name, string description, string argument) => new()
+    {
+        Name = name, Description = description,
+        ParametersJsonSchema = $"{{\"type\":\"object\",\"properties\":{{\"{argument}\":{{\"type\":\"integer\"}}}},\"required\":[\"{argument}\"],\"additionalProperties\":false}}"
+    };
 
     /// <summary>
     /// Tool definition for looking up a customer by ID.

@@ -8,6 +8,10 @@ using SupportAgent.Infrastructure.Services;
 using Microsoft.AspNetCore.Identity;
 using SupportAgent.Infrastructure.Identity;
 using SupportAgent.Infrastructure.Documents;
+using SupportAgent.Core.BusinessQuery;
+using SupportAgent.Infrastructure.BusinessQuery;
+using SupportAgent.Core.ExternalData;
+using SupportAgent.Infrastructure.ExternalData;
 
 namespace SupportAgent.Infrastructure;
 
@@ -68,6 +72,24 @@ public static class DependencyInjection
         services.AddScoped<IKnowledgeService, KnowledgeService>();
         services.AddScoped<IDocumentTextExtractor, DocumentTextExtractor>();
         services.AddScoped<IKnowledgeIngestionService, KnowledgeIngestionService>();
+        services.AddSingleton<IInvoiceCalculator, InvoiceCalculator>();
+        services.AddScoped<IProductService, ProductService>();
+        services.AddScoped<IInvoiceService, InvoiceService>();
+        services.AddScoped<IPaymentService, PaymentService>();
+        services.AddScoped<IInventoryService, InventoryService>();
+        services.AddScoped<IInvoiceDocumentService, InvoiceDocumentService>();
+        services.AddSingleton<IBusinessSchemaService, BusinessSchemaService>();
+        services.AddSingleton<IBusinessSchemaSelector, BusinessSchemaSelector>();
+        services.AddScoped<IBusinessQueryPlanner, BusinessQueryPlanner>();
+        services.AddScoped<IBusinessQueryValidator, BusinessQueryValidator>();
+        services.AddScoped<IBusinessQueryExecutor, BusinessQueryExecutor>();
+        services.AddScoped<IBusinessQueryService, BusinessQueryService>();
+        services.AddSingleton<IExternalDataSourceSecretProvider, ConfigurationExternalDataSourceSecretProvider>();
+        services.AddSingleton<IExternalDataSourceConnector, SqlServerExternalDataSourceConnector>();
+        services.AddScoped<IExternalSchemaDiscoveryService, ExternalSchemaDiscoveryService>();
+        services.AddScoped<IExternalBusinessSchemaProvider, ExternalBusinessSchemaProvider>();
+        services.AddSingleton<IExternalBusinessQueryCompiler, SqlServerBusinessQueryCompiler>();
+        services.AddScoped<IExternalBusinessQueryService, ExternalBusinessQueryService>();
 
         return services;
     }
@@ -90,6 +112,7 @@ public static class DependencyInjection
             scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>(),
             cancellationToken);
         await DevelopmentDataSeeder.SeedAsync(dbContext, cancellationToken);
+        await ErpDevelopmentSeeder.SeedAsync(dbContext, cancellationToken);
         // A second pass links the seeded customer profile to its customer Identity account.
         await IdentityDevelopmentSeeder.SeedAsync(
             dbContext,

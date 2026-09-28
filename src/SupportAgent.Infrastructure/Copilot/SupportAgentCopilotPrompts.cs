@@ -18,7 +18,7 @@ public static class SupportAgentCopilotPrompts
                 "properties": {
                   "label": { "type": "string" },
                   "description": { "type": "string" },
-                  "actionType": { "type": "string", "enum": ["GetCustomerOrders", "GetOrderStatus", "SearchKnowledgeBase", "ViewRecentTickets", "LinkOrder"] }
+                  "actionType": { "type": "string", "enum": ["GetCustomerOrders", "GetOrderStatus", "SearchKnowledgeBase", "ViewRecentTickets", "LinkOrder", "ViewInvoice", "DownloadInvoicePdf", "ViewCustomerInvoices", "CheckCustomerBalance"] }
                 },
                 "required": ["label", "actionType"],
                 "additionalProperties": false
@@ -69,6 +69,9 @@ public static class SupportAgentCopilotPrompts
         customer or order facts and is not the first step for a linked entity status. The model must decide which
         tools are relevant from the complete ticket
         context; do not call a tool merely because it is available.
+        Use existing dedicated tools for important known record lookups. For flexible reporting, rankings,
+        grouping, or filtering across approved business data, use QueryBusinessData. It is read-only and applies
+        server-side validation and tenant isolation. Never ask it to mutate data or provide SQL.
 
         After tool results are returned, synthesize them with the ticket issue and conversation. If a useful fact
         still cannot be verified, explain the next verification step instead of inventing it. If order status was
@@ -90,7 +93,12 @@ public static class SupportAgentCopilotPrompts
         Retain conversation context across follow-up questions.
         After using any needed tools, return ONLY valid JSON with this exact shape:
         {"answer":"clear natural-language answer","suggestedActions":[{"label":"short button label","description":"optional explanation","actionType":"one allowed action type"}],"confidence":0.0}
-        Suggested action types are GetCustomerOrders, GetOrderStatus, SearchKnowledgeBase, ViewRecentTickets, and LinkOrder.
+        Suggested action types are GetCustomerOrders, GetOrderStatus, SearchKnowledgeBase, ViewRecentTickets,
+        LinkOrder, ViewInvoice, DownloadInvoicePdf, ViewCustomerInvoices, and CheckCustomerBalance.
+        Invoice actions are human-triggered and read-only. Suggest ViewCustomerInvoices to retrieve this ticket
+        customer's invoices and CheckCustomerBalance to retrieve trusted totals. Suggest ViewInvoice or
+        DownloadInvoicePdf only when a specific invoice has already been identified by trusted application or
+        tool context. Never invent an invoice ID, route, URL, file path, or financial value.
         Suggest LinkOrder only after trusted action results identify a specific candidate order.
         Suggested actions are advisory for the human agent and must never claim they were executed.
         Never return tool call syntax or function names in the answer field.

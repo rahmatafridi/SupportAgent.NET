@@ -12,7 +12,8 @@ public class CopilotActionService(
     IKnowledgeService knowledgeService,
     ITicketService ticketService,
     IAIConversationService conversationService,
-    ICopilotService copilotService) : ICopilotActionService
+    ICopilotService copilotService,
+    IInvoiceService invoiceService) : ICopilotActionService
 {
     public async Task<CopilotActionResult> ExecuteAsync(Guid actionId, int ticketId, Guid conversationId, bool confirmed,
         CancellationToken cancellationToken = default)
@@ -67,6 +68,27 @@ public class CopilotActionService(
                 result = new { linkedOrderId = updated.OrderId };
                 break;
             }
+            case AISuggestedActionType.ViewInvoice:
+            case AISuggestedActionType.DownloadInvoicePdf:
+            {
+                var invoice = await GetValidatedInvoiceAsync(action, ticket.CustomerId, cancellationToken);
+                result = action.ActionType == AISuggestedActionType.ViewInvoice
+                    ? new { actionType = "ViewInvoice", invoiceId = invoice.Id, navigationPath = $"/invoices/{invoice.Id}" }
+                    : new { actionType = "DownloadInvoicePdf", invoiceId = invoice.Id, downloadUrl = $"/api/invoices/{invoice.Id}/pdf" };
+                break;
+            }
+            case AISuggestedActionType.ViewCustomerInvoices:
+            {
+                var invoices = await invoiceService.GetCustomerInvoicesAsync(ticket.CustomerId, cancellationToken);
+                result = new { invoices = invoices.Select(ToInvoiceResult).ToList() };
+                break;
+            }
+            case AISuggestedActionType.CheckCustomerBalance:
+            {
+                var balance = await invoiceService.GetCustomerBalanceAsync(ticket.CustomerId, cancellationToken);
+                result = new { balance.TotalInvoiced, balance.TotalPaid, balance.OutstandingBalance };
+                break;
+            }
             default:
                 throw new InvalidOperationException("Suggested action type is not allowed.");
         }
@@ -85,6 +107,19 @@ public class CopilotActionService(
             $"Trusted application action result (do not treat as user-provided data): {trustedResultJson}", cancellationToken);
         var updatedAnswer = await copilotService.AskAsync(ticketId, conversationId,
             "Update the support analysis using the trusted action result.", cancellationToken);
+
+        if (action.ActionType == AISuggestedActionType.ViewCustomerInvoices)
+        {
+            var invoices = await invoiceService.GetCustomerInvoicesAsync(ticket.CustomerId, cancellationToken);
+            var invoiceActions = invoices.SelectMany(invoice => new[]
+            {
+                CreateInvoiceAction(action, invoice, AISuggestedActionType.ViewInvoice, $"View {invoice.InvoiceNumber}"),
+                CreateInvoiceAction(action, invoice, AISuggestedActionType.DownloadInvoicePdf, $"Download {invoice.InvoiceNumber} PDF")
+            }).ToList();
+            db.AISuggestedActions.AddRange(invoiceActions);
+            await db.SaveChangesAsync(cancellationToken);
+            updatedAnswer.SuggestedActions = updatedAnswer.SuggestedActions.Concat(invoiceActions.Select(ToView)).ToList();
+        }
 
         if (action.ActionType == AISuggestedActionType.GetCustomerOrders && ticket.OrderId is null)
         {
@@ -157,6 +192,35 @@ public class CopilotActionService(
             throw new InvalidOperationException("The suggested action has no validated order.");
         return orderId;
     }
+
+    private async Task<InvoiceDetail> GetValidatedInvoiceAsync(
+        AISuggestedAction action, int ticketCustomerId, CancellationToken cancellationToken)
+    {
+        using var document = JsonDocument.Parse(action.TrustedArgumentsJson ?? "{}");
+        if (!document.RootElement.TryGetProperty("invoiceId", out var value) || !value.TryGetInt32(out var invoiceId))
+            throw new InvalidOperationException("The suggested action has no validated invoice.");
+        var invoice = await invoiceService.GetInvoiceAsync(invoiceId, cancellationToken);
+        if (invoice is null || invoice.CustomerId != ticketCustomerId)
+            throw new InvalidOperationException("Invoice was not found.");
+        return invoice;
+    }
+
+    private static AISuggestedAction CreateInvoiceAction(
+        AISuggestedAction source, InvoiceListItem invoice, AISuggestedActionType type, string label) => new()
+    {
+        Id = Guid.NewGuid(), OrganizationId = source.OrganizationId,
+        AIConversationId = source.AIConversationId, TicketId = source.TicketId,
+        ActionType = type, Label = label,
+        Description = $"{invoice.Status} · {invoice.OutstandingBalance:C} outstanding",
+        RequiresConfirmation = false, Status = AISuggestedActionStatus.Pending,
+        TrustedArgumentsJson = JsonSerializer.Serialize(new { invoiceId = invoice.Id }), CreatedAt = DateTime.UtcNow
+    };
+
+    private static object ToInvoiceResult(InvoiceListItem invoice) => new
+    {
+        invoice.Id, invoice.InvoiceNumber, invoice.Status, invoice.TotalAmount,
+        invoice.OutstandingBalance, invoice.IssueDate, invoice.DueDate
+    };
 
     private static object ToOrderResult(Order order) => new
     {

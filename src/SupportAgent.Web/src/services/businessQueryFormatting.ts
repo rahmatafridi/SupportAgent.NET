@@ -1,0 +1,4 @@
+import type { BusinessQueryColumnDisplay } from '../types/businessQuery'
+export function unwrap(value:unknown):unknown{return value&&typeof value==='object'&&'value'in value?unwrap((value as {value:unknown}).value):value}
+export function formatBusinessValue(value:unknown,column?:BusinessQueryColumnDisplay){value=unwrap(value);if(value==null)return '—';switch(column?.dataType.toLowerCase()){case'money':return new Intl.NumberFormat(undefined,{style:'currency',currency:'USD'}).format(Number(value));case'date':return new Intl.DateTimeFormat(undefined,{dateStyle:'medium'}).format(new Date(String(value)));case'boolean':return value?'Yes':'No';default:return String(value)}}
+export const operatorLabel=(v:string)=>({Equals:'=',NotEquals:'≠',GreaterThan:'>',GreaterThanOrEqual:'≥',LessThan:'<',LessThanOrEqual:'≤',Contains:'contains',StartsWith:'starts with',In:'is one of',IsNull:'is empty',IsNotNull:'is not empty',Between:'between'}[v]??v)

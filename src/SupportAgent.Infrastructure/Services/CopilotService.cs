@@ -86,6 +86,11 @@ public class CopilotService : ICopilotService
                 ticketId);
         }
         var answer = structured.Answer;
+
+        // Persist successful native-tool calls before translating model suggestions.
+        // Invoice navigation actions may only obtain their trusted invoiceId from
+        // a validated GetInvoice tool call, never from model-provided labels or URLs.
+        await PersistToolAuditsAsync(conversation.Id, response.ToolExecutions, cancellationToken);
         var suggestedActions = await PersistSuggestedActionsAsync(
             conversation.Id, ticket, structured.SuggestedActions, cancellationToken);
 
@@ -94,8 +99,6 @@ public class CopilotService : ICopilotService
             "assistant",
             answer,
             cancellationToken);
-
-        await PersistToolAuditsAsync(conversation.Id, response.ToolExecutions, cancellationToken);
 
         return new CopilotAskResult
         {
@@ -143,9 +146,12 @@ public class CopilotService : ICopilotService
                 AISuggestedActionType.SearchKnowledgeBase =>
                     JsonSerializer.Serialize(new { query = ticket.Subject }),
                 AISuggestedActionType.LinkOrder => null,
+                AISuggestedActionType.ViewInvoice or AISuggestedActionType.DownloadInvoicePdf =>
+                    await GetTrustedInvoiceArgumentsAsync(conversationId, ticket.CustomerId, cancellationToken),
                 _ => "{}"
             };
-            if ((actionType is AISuggestedActionType.GetOrderStatus or AISuggestedActionType.LinkOrder) &&
+            if ((actionType is AISuggestedActionType.GetOrderStatus or AISuggestedActionType.LinkOrder or
+                    AISuggestedActionType.ViewInvoice or AISuggestedActionType.DownloadInvoicePdf) &&
                 trustedArguments is null) continue;
             created.Add(new AISuggestedAction
             {
@@ -200,8 +206,41 @@ public class CopilotService : ICopilotService
         AISuggestedActionType.SearchKnowledgeBase => "Search the knowledge base",
         AISuggestedActionType.ViewRecentTickets => "View customer's recent tickets",
         AISuggestedActionType.LinkOrder => "Link this order",
+        AISuggestedActionType.ViewInvoice => "View invoice",
+        AISuggestedActionType.DownloadInvoicePdf => "Download invoice PDF",
+        AISuggestedActionType.ViewCustomerInvoices => "View customer invoices",
+        AISuggestedActionType.CheckCustomerBalance => "Check customer balance",
         _ => "Review suggested action"
     };
+
+    private async Task<string?> GetTrustedInvoiceArgumentsAsync(
+        Guid conversationId, int ticketCustomerId, CancellationToken cancellationToken)
+    {
+        var audits = await _dbContext.AIConversationToolAudits
+            .Where(audit => audit.AIConversationId == conversationId && audit.Success && audit.ToolName == "GetInvoice")
+            .OrderByDescending(audit => audit.CreatedAt)
+            .Select(audit => audit.ArgumentsJson)
+            .ToListAsync(cancellationToken);
+
+        foreach (var argumentsJson in audits)
+        {
+            try
+            {
+                using var document = JsonDocument.Parse(argumentsJson);
+                if (!document.RootElement.TryGetProperty("invoiceId", out var node) || !node.TryGetInt32(out var invoiceId))
+                    continue;
+                var invoice = await _dbContext.Invoices.AsNoTracking()
+                    .FirstOrDefaultAsync(item => item.Id == invoiceId && item.CustomerId == ticketCustomerId, cancellationToken);
+                if (invoice is not null)
+                    return JsonSerializer.Serialize(new { invoiceId });
+            }
+            catch (JsonException)
+            {
+                // Malformed provider arguments are never promoted into a trusted action.
+            }
+        }
+        return null;
+    }
 
     /// <inheritdoc />
     public async Task<CopilotDraftResult> DraftReplyAsync(

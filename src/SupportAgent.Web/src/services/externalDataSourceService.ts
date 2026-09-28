@@ -1,0 +1,21 @@
+import {apiFetch} from './api'
+export type Source={id:string;name:string;provider:string;enabled:boolean;approvedEntities:number}
+export type Column={name:string;sqlType:string;nullable:boolean;primaryKey:boolean;foreignKey:boolean;supported:boolean}
+export type ForeignKey={name:string;fromSchema:string;fromObject:string;fromColumn:string;toSchema:string;toObject:string;toColumn:string}
+export type DbObject={schema:string;name:string;objectType:string;columns:Column[];relationships:ForeignKey[];approved:boolean;mappingValid?:boolean;mapping?:Mapping}
+export type Mapping={id:string;externalSchemaName:string;externalTableName:string;businessEntityName:string;displayName:string;description:string;concepts:string;defaultRecencyField?:string;isEnabled:boolean;isValid:boolean;validationMessage?:string;fields:{externalColumnName:string;businessFieldName:string;displayName:string;description:string;concepts:string;isQueryable:boolean;isSensitive:boolean}[]}
+export type Relationship={id:string;name:string;description:string;concepts:string;relationshipType:string;discoveredForeignKeyName?:string;fromEntity:string;fromField:string;toEntity:string;toField:string;isEnabled:boolean}
+export type Scope={id:string;name:string;description:string;isEnabled:boolean;entityIds:string[];entityNames:string[]}
+async function json<T>(url:string,init?:RequestInit):Promise<T>{const r=await apiFetch(url,init);const body=await r.json().catch(()=>({}));if(!r.ok)throw new Error((body as {error?:string}).error??'The data-source operation failed.');return body as T}
+export const listSources=()=>json<Source[]>('/api/admin/data-sources')
+export const createSource=(body:{name:string;secretKey:string;description:string;enabled:boolean})=>json<Source>('/api/admin/data-sources',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})
+export const testSource=(id:string)=>json<{success:boolean;databaseName?:string;durationMs:number;error?:string}>(`/api/admin/data-sources/${id}/test`,{method:'POST'})
+export const discoverSource=(id:string)=>json<DbObject[]>(`/api/admin/data-sources/${id}/discover`,{method:'POST'})
+export const listMappings=(id:string)=>json<Mapping[]>(`/api/admin/data-sources/${id}/mappings`)
+export const listRelationships=(id:string)=>json<Relationship[]>(`/api/admin/data-sources/${id}/relationships`)
+export const listScopes=(id:string)=>json<Scope[]>(`/api/admin/data-sources/${id}/scopes`)
+export const saveScope=(id:string,body:{name:string;description:string;enabled:boolean;entityIds:string[]})=>json(`/api/admin/data-sources/${id}/scopes`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})
+export const setScopeEnabled=(id:string,scopeId:string,enabled:boolean)=>json(`/api/admin/data-sources/${id}/scopes/${scopeId}/enabled`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({enabled})})
+export const saveRelationship=(id:string,body:{name:string;description:string;concepts:string;relationshipType:string;discoveredForeignKeyName?:string;fromEntity:string;fromField:string;toEntity:string;toField:string;enabled:boolean})=>json(`/api/admin/data-sources/${id}/relationships`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})
+export const setSourceEnabled=(id:string,enabled:boolean)=>json(`/api/admin/data-sources/${id}/enabled`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({enabled})})
+export const saveMapping=(id:string,o:DbObject,enabled:Set<string>,logical:{name:string;display:string;description:string;concepts:string;defaultRecencyField?:string},fieldNames:Record<string,string>)=>json(`/api/admin/data-sources/${id}/mappings`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({schema:o.schema,table:o.name,objectType:o.objectType,businessEntityName:logical.name,displayName:logical.display,description:logical.description,concepts:logical.concepts,defaultRecencyField:logical.defaultRecencyField||null,enabled:true,fields:o.columns.map(c=>({externalColumnName:c.name,businessFieldName:fieldNames[c.name]||c.name,displayName:fieldNames[c.name]||c.name,description:`Mapped ${c.name}`,dataType:c.sqlType,concepts:c.name.replaceAll('_',' '),isQueryable:c.supported&&enabled.has(c.name),isSensitive:false}))})})

@@ -132,6 +132,9 @@ app.MapAIEndpoints();
 app.MapCopilotEndpoints();
 app.MapAdminEndpoints();
 app.MapPortalEndpoints();
+app.MapErpEndpoints();
+app.MapBusinessQueryEndpoints();
+app.MapExternalDataSourceEndpoints();
 
 app.Run();
 

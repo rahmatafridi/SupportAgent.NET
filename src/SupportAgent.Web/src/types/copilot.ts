@@ -19,7 +19,7 @@ export interface AISuggestedAction {
   id: string
   label: string
   description: string | null
-  actionType: 'GetCustomerOrders' | 'GetOrderStatus' | 'SearchKnowledgeBase' | 'ViewRecentTickets' | 'LinkOrder'
+  actionType: 'GetCustomerOrders' | 'GetOrderStatus' | 'SearchKnowledgeBase' | 'ViewRecentTickets' | 'LinkOrder' | 'ViewInvoice' | 'DownloadInvoicePdf' | 'ViewCustomerInvoices' | 'CheckCustomerBalance'
   requiresConfirmation: boolean
   status: 'Pending' | 'Completed' | 'Failed'
 }
@@ -41,6 +41,13 @@ export interface CopilotActionExecutionResponse {
     orders?: ActionOrderResult[]
     linkedOrderId?: number
     order?: Omit<ActionOrderResult, 'linkActionId'>
+    invoiceId?: number
+    navigationPath?: string
+    downloadUrl?: string
+    invoices?: unknown[]
+    totalInvoiced?: number
+    totalPaid?: number
+    outstandingBalance?: number
   }
   updatedResponse: CopilotAskResponse
 }

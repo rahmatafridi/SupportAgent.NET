@@ -6,7 +6,11 @@ public enum AISuggestedActionType
     GetOrderStatus,
     SearchKnowledgeBase,
     ViewRecentTickets,
-    LinkOrder
+    LinkOrder,
+    ViewInvoice,
+    DownloadInvoicePdf,
+    ViewCustomerInvoices,
+    CheckCustomerBalance
 }
 
 public enum AISuggestedActionStatus

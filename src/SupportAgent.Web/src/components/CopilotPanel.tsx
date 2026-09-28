@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { askCopilot, draftCopilotReply, executeCopilotAction } from '../services/copilotService'
 import type { ActionOrderResult, CopilotAskResponse, CopilotDraftResponse } from '../types/copilot'
+import { useNavigate } from 'react-router-dom'
 
 interface CopilotPanelProps {
   ticketId: number
@@ -8,6 +9,7 @@ interface CopilotPanelProps {
 }
 
 export function CopilotPanel({ ticketId, onUseDraft }: CopilotPanelProps) {
+  const navigate = useNavigate()
   const [conversationId, setConversationId] = useState<string | null>(null)
   const [question, setQuestion] = useState('What is happening with this customer?')
   const [answer, setAnswer] = useState<CopilotAskResponse | null>(null)
@@ -47,6 +49,15 @@ export function CopilotPanel({ ticketId, onUseDraft }: CopilotPanelProps) {
       setLastSubmittedQuestion(null)
       if (execution.result.orders) setCandidateOrders(execution.result.orders)
       if (execution.result.linkedOrderId) setCandidateOrders([])
+      if (execution.result.navigationPath) navigate(execution.result.navigationPath)
+      if (execution.result.downloadUrl) {
+        const anchor = document.createElement('a')
+        anchor.href = execution.result.downloadUrl
+        anchor.download = ''
+        document.body.appendChild(anchor)
+        anchor.click()
+        anchor.remove()
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Suggested action failed.')
     } finally {

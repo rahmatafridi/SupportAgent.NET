@@ -43,12 +43,15 @@ public sealed class AIUsageService(
             TotalTokens = group.Sum(x => (long)x.TotalTokens)
         }).FirstOrDefaultAsync(cancellationToken) ?? new AIUsageSummary();
 
-        totals.Breakdown = await records.GroupBy(x => new { x.Provider, x.Model })
+        totals.Breakdown = await records.GroupBy(x => new { x.Provider, x.Model, x.RequestType })
             .Select(group => new AIUsageBreakdown
             {
                 Provider = group.Key.Provider,
                 Model = group.Key.Model,
+                Feature = group.Key.RequestType,
                 Requests = group.Count(),
+                InputTokens = group.Sum(x => (long)x.InputTokens),
+                OutputTokens = group.Sum(x => (long)x.OutputTokens),
                 TotalTokens = group.Sum(x => (long)x.TotalTokens)
             }).ToListAsync(cancellationToken);
         return totals;
